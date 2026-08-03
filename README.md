@@ -123,15 +123,6 @@ Open `http://localhost:8080` in your browser.
 
 ---
 
-## Deploying to Vercel
-
-1. Push this repo to GitHub
-2. Import it on [vercel.com](https://vercel.com)
-3. Set **Root Directory** to `webapp` in the project settings
-4. Deploy — no build command needed
-
----
-
 ## Dependencies
 
 The notebook and webapp use only:
