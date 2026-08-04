@@ -1,0 +1,159 @@
+%=============================================================
+%  KU FORMAT — Lab Report 2F: Comparative Analysis
+%  (SVM vs. Naive Bayes / Simple LR vs. Multiple LR)
+%=============================================================
+\documentclass[12pt,a4paper]{article}
+\usepackage[a4paper, margin=2.5cm]{geometry}
+\usepackage{graphicx,amsmath,amssymb,booktabs,array,listings,xcolor,hyperref,float,fancyhdr,titlesec,parskip,enumitem,caption,multirow}
+\definecolor{kuBlue}{RGB}{0,56,101}
+\definecolor{codeBg}{RGB}{248,248,246}
+\pagestyle{fancy}\fancyhf{}
+\fancyhead[L]{\small\textcolor{kuBlue}{Introduction to Machine Learning --- Lab Report}}
+\fancyhead[R]{\small\textcolor{kuBlue}{Kathmandu University}}
+\fancyfoot[C]{\small\thepage}
+\renewcommand{\headrulewidth}{0.5pt}
+\renewcommand{\headrule}{\hbox to\headwidth{\color{kuBlue}\leaders\hrule height \headrulewidth\hfill}}
+\titleformat{\section}{\large\bfseries\color{kuBlue}}{}{0em}{}[\titlerule]
+\titleformat{\subsection}{\normalsize\bfseries}{}{0em}{}
+\hypersetup{colorlinks=true,linkcolor=kuBlue,urlcolor=kuBlue}
+
+\begin{document}
+
+\begin{center}
+  {\Large\bfseries\color{kuBlue} KATHMANDU UNIVERSITY}\\[4pt]
+  {\normalsize Department of Computer Science \& Engineering}\\[2pt]
+  {\normalsize School of Engineering}\\[10pt]
+  \rule{\linewidth}{1.5pt}\\[6pt]
+  {\large\bfseries Lab Report 2F}\\[4pt]
+  {\LARGE\bfseries Comparative Analysis of ML Algorithms}\\[4pt]
+  {\large Classification \& Regression: Naïve Bayes, SVM, Linear Regression}\\[4pt]
+  \rule{\linewidth}{0.8pt}\\[10pt]
+\end{center}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{r l}
+  \textbf{Subject}      & Introduction to Machine Learning \\
+  \textbf{Course Code}  & COMP~401 \\
+  \textbf{Program}      & B.Tech.\ in Artificial Intelligence \\
+  \textbf{Semester}     & 4th Semester \\
+  \textbf{Student Name} & Ghanshyam Ghimire \\
+  \textbf{Roll No.}     & \textit{[Your Roll No.]} \\
+  \textbf{Instructor}   & Sandeep Gupta \\
+  \textbf{Date}         & \today \\
+\end{tabular}
+\end{center}
+\vspace{10pt}\hrule\vspace{16pt}
+
+\section{Objectives}
+\begin{enumerate}[label=\arabic*.]
+  \item Consolidate results from all Lab 2 experiments (2A--2E).
+  \item Compare classification algorithms: Gaussian Naïve Bayes vs.\ Linear SVM vs.\ Quadratic SVM.
+  \item Compare regression approaches: Simple LR vs.\ Multiple LR.
+  \item Draw conclusions about algorithm selection for different problem types.
+\end{enumerate}
+
+\section{Classification Comparison}
+
+\subsection{Algorithms Compared}
+
+\begin{enumerate}[label=\arabic*.]
+  \item \textbf{Gaussian Naïve Bayes} (Lab Report 1) — 3-class classification on full Iris dataset.
+  \item \textbf{Linear SVM} (Lab Report 2B) — binary classification (setosa vs.\ versicolor), petal features.
+  \item \textbf{Quadratic SVM} (Lab Report 2C) — same binary problem, dual formulation.
+\end{enumerate}
+
+\subsection{Results Summary}
+
+\begin{table}[H]
+\centering
+\caption{Classification Algorithm Comparison on Iris Dataset}
+\begin{tabular}{l l c c c c}
+\toprule
+\textbf{Algorithm} & \textbf{Task} & \textbf{Accuracy} & \textbf{Macro F1} & \textbf{Train Size} & \textbf{Support Vectors} \\
+\midrule
+Gaussian Naïve Bayes & 3-class & 93.33\% & 0.933 & 120 & n/a \\
+Linear SVM (primal)  & Binary  & 100.00\% & 1.000 & 100 & n/a \\
+Quadratic SVM (dual) & Binary  & 100.00\% & 1.000 & 100 & 2   \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Observations}
+
+\begin{itemize}
+  \item Both SVM variants achieve \textbf{100\% accuracy} on the binary subset, confirming that setosa and versicolor are \textit{linearly separable} in petal space.
+  \item The Gaussian NB achieves \textbf{93.33\%} on the 3-class problem; the 2 errors occur between \textit{versicolor} and \textit{virginica}, which overlap in feature space.
+  \item The Quadratic SVM (dual) identifies only \textbf{2 support vectors}, making the classifier highly sparse and well-generalising.
+  \item The primal and dual SVMs produce near-identical decision boundaries, confirming strong duality at the optimal.
+\end{itemize}
+
+\section{Regression Comparison}
+
+\begin{table}[H]
+\centering
+\caption{Regression Algorithm Comparison}
+\begin{tabular}{l l c c l}
+\toprule
+\textbf{Algorithm} & \textbf{Dataset} & \textbf{$R^2$} & \textbf{MSE} & \textbf{Features} \\
+\midrule
+Simple LR   & House Prices      & 0.914 & 8.98$\times10^8$ & 1 (area) \\
+Multiple LR & Student Perf.     & 0.978 & 24.98            & 5 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Observations}
+
+\begin{itemize}
+  \item Multiple LR achieves \textbf{$R^2 = 0.978$} vs.\ Simple LR's \textbf{0.914}, demonstrating the benefit of including additional informative features.
+  \item The much lower MSE of Multiple LR (24.98 vs.\ 898M) is partly due to different target scales (Student Performance Index 10--100 vs.\ house prices in USD).
+  \item Both models recover the true data-generating coefficients accurately, validating the OLS normal-equation implementation.
+\end{itemize}
+
+\section{Algorithmic Trade-offs}
+
+\begin{table}[H]
+\centering
+\caption{Algorithm Property Comparison}
+\begin{tabular}{l c c c c}
+\toprule
+\textbf{Property} & \textbf{GNB} & \textbf{Lin.\ SVM} & \textbf{Quad.\ SVM} & \textbf{MLR} \\
+\midrule
+Training complexity & $O(N \cdot d)$ & $O(N^2 \cdot d)$ & $O(N^3)$ & $O(N \cdot d^2)$ \\
+Prediction complexity & $O(d)$ & $O(d)$ & $O(d)$ & $O(d)$ \\
+Interpretability & High & Medium & Medium & High \\
+Handles multi-class & Yes & No (binary) & No (binary) & Yes (OvR) \\
+Requires feature scaling & No & Yes & Yes & No \\
+Identifies support vectors & No & No & Yes & No \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Discussion}
+
+\begin{enumerate}[label=\arabic*.]
+  \item \textbf{Naïve Bayes} is fast, interpretable, and works well when features are approximately independent. It handles multi-class natively but underperforms when classes overlap.
+
+  \item \textbf{Linear SVM (primal)} is efficient for large datasets ($O(N \cdot d)$ per epoch) and produces a geometrically interpretable maximum-margin classifier.
+
+  \item \textbf{Quadratic SVM (dual)} is theoretically elegant, provides support vectors, and scales to kernel methods (non-linear classification), but requires $O(N^2)$ memory for the Gram matrix.
+
+  \item \textbf{Simple Linear Regression} is the most interpretable regression model; suitable when a single strong predictor exists.
+
+  \item \textbf{Multiple Linear Regression} significantly improves predictive accuracy when multiple informative features are available, at the cost of higher data requirements and potential multicollinearity.
+\end{enumerate}
+
+\section{Conclusion}
+
+Across five experiments, all algorithms were implemented from scratch in Python using NumPy. The SVM approaches outperform Naïve Bayes on the linearly separable binary subset, while Multiple LR substantially improves on Simple LR when additional features are informative. The choice of algorithm depends on the number of features, class structure, interpretability requirements, and computational budget.
+
+\section{References}
+\begin{enumerate}[label={[\arabic*]}]
+  \item T.\ Mitchell, \textit{Machine Learning}. McGraw-Hill, 1997.
+  \item C.\ M.\ Bishop, \textit{Pattern Recognition and Machine Learning}. Springer, 2006.
+  \item T.\ Hastie, R.\ Tibshirani, and J.\ Friedman, \textit{The Elements of Statistical Learning}, 2nd ed.\ Springer, 2009.
+  \item C.\ Cortes and V.\ Vapnik, ``Support-vector networks,'' \textit{Machine Learning}, vol.\ 20, pp.\ 273--297, 1995.
+\end{enumerate}
+
+\end{document}

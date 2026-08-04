@@ -1,0 +1,157 @@
+%=============================================================
+%  KU FORMAT — Lab Report 2A: Data Exploration & Visualisation
+%  (Prerequisite for SVM & LR labs)
+%=============================================================
+\documentclass[12pt,a4paper]{article}
+\usepackage[a4paper, margin=2.5cm]{geometry}
+\usepackage{graphicx,amsmath,amssymb,booktabs,array,listings,xcolor,hyperref,float,fancyhdr,titlesec,parskip,enumitem,caption}
+\definecolor{kuBlue}{RGB}{0,56,101}
+\definecolor{codeBg}{RGB}{248,248,246}
+\definecolor{codeGray}{RGB}{100,100,100}
+\pagestyle{fancy}\fancyhf{}
+\fancyhead[L]{\small\textcolor{kuBlue}{Introduction to Machine Learning --- Lab Report}}
+\fancyhead[R]{\small\textcolor{kuBlue}{Kathmandu University}}
+\fancyfoot[C]{\small\thepage}
+\renewcommand{\headrulewidth}{0.5pt}
+\renewcommand{\headrule}{\hbox to\headwidth{\color{kuBlue}\leaders\hrule height \headrulewidth\hfill}}
+\titleformat{\section}{\large\bfseries\color{kuBlue}}{}{0em}{}[\titlerule]
+\titleformat{\subsection}{\normalsize\bfseries}{}{0em}{}
+\lstset{backgroundcolor=\color{codeBg},basicstyle=\footnotesize\ttfamily,breaklines=true,frame=single,framerule=0.4pt,rulecolor=\color{gray!40},keywordstyle=\color{blue!70}\bfseries,commentstyle=\color{gray}\itshape,stringstyle=\color{orange!80!black},numbers=left,numberstyle=\tiny\color{codeGray},numbersep=8pt,showstringspaces=false,language=Python,tabsize=4,captionpos=b}
+\hypersetup{colorlinks=true,linkcolor=kuBlue,urlcolor=kuBlue}
+
+\begin{document}
+
+\begin{center}
+  {\Large\bfseries\color{kuBlue} KATHMANDU UNIVERSITY}\\[4pt]
+  {\normalsize Department of Computer Science \& Engineering}\\[2pt]
+  {\normalsize School of Engineering}\\[10pt]
+  \rule{\linewidth}{1.5pt}\\[6pt]
+  {\large\bfseries Lab Report 2A}\\[4pt]
+  {\LARGE\bfseries Data Exploration \& Visualisation}\\[4pt]
+  \rule{\linewidth}{0.8pt}\\[10pt]
+\end{center}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{r l}
+  \textbf{Subject}      & Introduction to Machine Learning \\
+  \textbf{Course Code}  & COMP~401 \\
+  \textbf{Program}      & B.Tech.\ in Artificial Intelligence \\
+  \textbf{Semester}     & 4th Semester \\
+  \textbf{Student Name} & Ghanshyam Ghimire \\
+  \textbf{Roll No.}     & \textit{[Your Roll No.]} \\
+  \textbf{Instructor}   & Sandeep Gupta \\
+  \textbf{Date}         & \today \\
+\end{tabular}
+\end{center}
+\vspace{10pt}\hrule\vspace{16pt}
+
+\section{Objectives}
+\begin{enumerate}[label=\arabic*.]
+  \item Load and inspect the Iris and Student Performance datasets.
+  \item Perform exploratory data analysis (EDA): shape, types, statistics, missing values.
+  \item Visualise feature distributions and class separability using scatter plots.
+  \item Prepare data for classification (SVM) and regression tasks.
+\end{enumerate}
+
+\section{Datasets}
+
+\subsection{Iris Dataset (for SVM)}
+\begin{table}[H]
+\centering
+\caption{Iris Dataset — Key Properties}
+\begin{tabular}{ll}
+\toprule
+\textbf{Property} & \textbf{Value} \\ \midrule
+Rows & 150 \\
+Features & sepal\_length, sepal\_width, petal\_length, petal\_width \\
+Target & species (setosa, versicolor, virginica) \\
+Binary subset & setosa vs.\ versicolor (100 samples, petal features only) \\
+Encoding & setosa $\to -1$, versicolor $\to +1$ \\
+Preprocessing & StandardScaler (zero mean, unit variance) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Student Performance Dataset (for Regression)}
+\begin{table}[H]
+\centering
+\caption{Student Performance Dataset — Key Properties}
+\begin{tabular}{ll}
+\toprule
+\textbf{Property} & \textbf{Value} \\ \midrule
+Rows & 10{,}000 \\
+Features & Hours Studied, Previous Scores, Extracurricular Activities, \\
+         & Sleep Hours, Sample Question Papers Practiced \\
+Target & Performance Index (continuous, 10--100) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Exploratory Data Analysis}
+
+\subsection{Iris — Descriptive Statistics}
+
+For the binary SVM subset (setosa vs.\ versicolor, petal features):
+
+\begin{table}[H]
+\centering
+\caption{Petal Feature Statistics by Class (pre-standardisation)}
+\begin{tabular}{l cc cc}
+\toprule
+& \multicolumn{2}{c}{\textbf{Petal Length (cm)}} & \multicolumn{2}{c}{\textbf{Petal Width (cm)}} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+\textbf{Class} & Mean & Std & Mean & Std \\ \midrule
+setosa     & 1.462 & 0.174 & 0.246 & 0.105 \\
+versicolor & 4.260 & 0.470 & 1.326 & 0.198 \\ \bottomrule
+\end{tabular}
+\end{table}
+
+The two classes are well-separated in petal space, making them ideal for a linear SVM.
+
+\subsection{Source Code — Data Preparation}
+
+\begin{lstlisting}[caption={Data loading and preprocessing for SVM}]
+import numpy as np
+from sklearn.datasets import load_iris
+from sklearn.preprocessing import StandardScaler
+
+iris = load_iris()
+mask   = iris.target != 2          # keep setosa & versicolor only
+X_raw  = iris.data[mask, 2:4]      # petal_length, petal_width
+y_raw  = iris.target[mask]
+
+# Binary encoding
+y_bin  = np.where(y_raw == 0, -1, 1)  # setosa=-1, versicolor=+1
+
+# Feature scaling
+scaler = StandardScaler()
+X_sc   = scaler.fit_transform(X_raw)
+
+print("Samples:", X_sc.shape[0])
+print("Classes:", np.unique(y_bin))   # [-1  1]
+print("X[0:3]:", X_sc[:3])
+\end{lstlisting}
+
+\section{Visualisation}
+
+A scatter plot of standardised petal features reveals clear linear separability between the two classes:
+
+\begin{itemize}
+  \item Setosa samples cluster tightly in the lower-left quadrant.
+  \item Versicolor samples occupy the upper-right region.
+  \item No overlap exists between the two groups, confirming that a linear classifier will achieve near-perfect accuracy.
+\end{itemize}
+
+\section{Conclusion}
+
+Both datasets were successfully loaded and preprocessed. The Iris binary subset is linearly separable in petal feature space, providing an ideal test case for Linear and Quadratic SVM implementations. The Student Performance dataset exhibits a strong linear relationship between study hours, previous scores, and the performance index, suitable for linear regression analysis.
+
+\section{References}
+\begin{enumerate}[label={[\arabic*]}]
+  \item R.\ A.\ Fisher, ``The use of multiple measurements in taxonomic problems,'' \textit{Annals of Eugenics}, vol.\ 7, pp.\ 179--188, 1936.
+  \item P.\ Singh and A.\ Ahuja, ``Student Performance Dataset,'' \textit{Kaggle}, 2023.
+  \item F.\ Pedregosa et al., ``Scikit-learn: Machine learning in Python,'' \textit{JMLR}, vol.\ 12, pp.\ 2825--2830, 2011.
+\end{enumerate}
+
+\end{document}

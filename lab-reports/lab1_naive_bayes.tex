@@ -1,0 +1,330 @@
+%=============================================================
+%  KU FORMAT — Lab Report 1: Gaussian Naïve Bayes on Iris
+%  Kathmandu University, Dept. of Computer Science & Engineering
+%=============================================================
+\documentclass[12pt,a4paper]{article}
+
+%--- Packages ---
+\usepackage[a4paper, margin=2.5cm]{geometry}
+\usepackage{graphicx}
+\usepackage{amsmath, amssymb}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{float}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{parskip}
+\usepackage{enumitem}
+\usepackage{caption}
+
+%--- Colors ---
+\definecolor{kuBlue}{RGB}{0,56,101}
+\definecolor{codeBg}{RGB}{248,248,246}
+\definecolor{codeGray}{RGB}{100,100,100}
+
+%--- Header / Footer ---
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textcolor{kuBlue}{Introduction to Machine Learning --- Lab Report}}
+\fancyhead[R]{\small\textcolor{kuBlue}{Kathmandu University}}
+\fancyfoot[C]{\small\thepage}
+\renewcommand{\headrulewidth}{0.5pt}
+\renewcommand{\headrule}{\hbox to\headwidth{\color{kuBlue}\leaders\hrule height \headrulewidth\hfill}}
+
+%--- Section Styling ---
+\titleformat{\section}{\large\bfseries\color{kuBlue}}{}{0em}{}[\titlerule]
+\titleformat{\subsection}{\normalsize\bfseries}{}{0em}{}
+
+%--- Code Listing Style ---
+\lstset{
+  backgroundcolor=\color{codeBg},
+  basicstyle=\footnotesize\ttfamily,
+  breaklines=true,
+  frame=single,
+  framerule=0.4pt,
+  rulecolor=\color{gray!40},
+  keywordstyle=\color{blue!70}\bfseries,
+  commentstyle=\color{gray}\itshape,
+  stringstyle=\color{orange!80!black},
+  numbers=left,
+  numberstyle=\tiny\color{codeGray},
+  numbersep=8pt,
+  showstringspaces=false,
+  language=Python,
+  tabsize=4,
+  captionpos=b,
+}
+
+\hypersetup{colorlinks=true, linkcolor=kuBlue, urlcolor=kuBlue, citecolor=kuBlue}
+
+%=============================================================
+\begin{document}
+%=============================================================
+
+%--- Title Block ---
+\begin{center}
+  {\Large\bfseries\color{kuBlue} KATHMANDU UNIVERSITY}\\[4pt]
+  {\normalsize Department of Computer Science \& Engineering}\\[2pt]
+  {\normalsize School of Engineering}\\[10pt]
+  \rule{\linewidth}{1.5pt}\\[6pt]
+  {\large\bfseries Lab Report}\\[4pt]
+  {\LARGE\bfseries Implement Gaussian Na\"{i}ve Bayes on the Iris Dataset}\\[4pt]
+  \rule{\linewidth}{0.8pt}\\[10pt]
+\end{center}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{r l}
+  \textbf{Subject}      & Introduction to Machine Learning \\
+  \textbf{Course Code}  & COMP~401 \\
+  \textbf{Program}      & B.Tech.\ in Artificial Intelligence \\
+  \textbf{Semester}     & 4th Semester \\
+  \textbf{Student Name} & Ghanshyam Ghimire \\
+  \textbf{Roll No.}     & \textit{[Your Roll No.]} \\
+  \textbf{Group}        & \textit{[Your Group]} \\
+  \textbf{Instructor}   & Sandeep Gupta \\
+  \textbf{Date}         & \today \\
+\end{tabular}
+\end{center}
+
+\vspace{10pt}
+\hrule
+\vspace{16pt}
+
+%=============================================================
+\section{Objectives}
+
+\begin{enumerate}[label=\arabic*.]
+  \item Implement the Gaussian Na\"{i}ve Bayes classifier \textbf{from scratch} (without using \texttt{sklearn.naive\_bayes}).
+  \item Apply the classifier to the Iris dataset for 3-class classification.
+  \item Display predicted vs.\ actual labels on the test set.
+  \item Compute and analyse the confusion matrix and performance metrics
+        (accuracy, precision, recall, F1-score per class and macro-averaged).
+\end{enumerate}
+
+%=============================================================
+\section{Background Theory}
+
+\subsection{Na\"{i}ve Bayes Classifier}
+
+The Na\"{i}ve Bayes classifier is a probabilistic supervised learning algorithm based on \textbf{Bayes' theorem}:
+
+\begin{equation}
+  P(y \mid \mathbf{x}) = \frac{P(\mathbf{x} \mid y)\, P(y)}{P(\mathbf{x})}
+  \label{eq:bayes}
+\end{equation}
+
+The \emph{na\"{i}ve} assumption is that all features $x_1, x_2, \ldots, x_d$ are conditionally independent given the class label $y$, so:
+
+\begin{equation}
+  P(\mathbf{x} \mid y) = \prod_{j=1}^{d} P(x_j \mid y)
+  \label{eq:naive}
+\end{equation}
+
+\subsection{Gaussian Na\"{i}ve Bayes}
+
+When features are continuous, the likelihood is modelled as a \textbf{Gaussian (Normal) distribution}:
+
+\begin{equation}
+  P(x_j \mid y=c) = \frac{1}{\sqrt{2\pi\sigma_{c,j}^2}}
+  \exp\!\left(-\frac{(x_j - \mu_{c,j})^2}{2\sigma_{c,j}^2}\right)
+  \label{eq:gaussian}
+\end{equation}
+
+where $\mu_{c,j}$ and $\sigma_{c,j}^2$ are the mean and variance of feature $j$ in class $c$, estimated from the training data.
+
+\subsection{Prediction Rule}
+
+The predicted class is the one that maximises the log-posterior:
+
+\begin{equation}
+  \hat{y} = \arg\max_{c} \left[\log P(y=c) + \sum_{j=1}^{d} \log P(x_j \mid y=c)\right]
+  \label{eq:predict}
+\end{equation}
+
+Using log-probabilities avoids numerical underflow when multiplying many small probabilities.
+
+%=============================================================
+\section{Dataset Description}
+
+The \textbf{Iris dataset} (Fisher, 1936) contains 150 samples of three iris species:
+
+\begin{table}[H]
+\centering
+\caption{Iris Dataset Summary}
+\begin{tabular}{l r}
+\toprule
+\textbf{Attribute} & \textbf{Value} \\
+\midrule
+Total samples     & 150 \\
+Classes           & 3 (\textit{Setosa}, \textit{Versicolor}, \textit{Virginica}) \\
+Samples per class & 50 \\
+Features          & 4 (Sepal Length, Sepal Width, Petal Length, Petal Width) \\
+Feature type      & Continuous (cm) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+An 80/20 stratified train-test split was used (120 training, 30 test samples).
+
+%=============================================================
+\section{Algorithm Implementation}
+
+\subsection{Training Phase}
+
+For each class $c$, compute:
+\begin{align}
+  \mu_{c,j}       &= \frac{1}{|D_c|} \sum_{i \in D_c} x_{i,j} \\
+  \sigma_{c,j}^2  &= \frac{1}{|D_c|} \sum_{i \in D_c} (x_{i,j} - \mu_{c,j})^2 + \varepsilon \\
+  \log P(y=c)     &= \log\!\left(\frac{|D_c|}{N}\right)
+\end{align}
+
+where $\varepsilon = 10^{-9}$ is added for Laplace smoothing to avoid zero variances.
+
+\subsection{Source Code}
+
+\begin{lstlisting}[caption={GaussianNaiveBayes — from-scratch implementation}]
+import numpy as np
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
+
+# ── Load data ───────────────────────────────────────────
+iris = load_iris()
+X, y = iris.data, iris.target
+class_names = iris.target_names
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.20, random_state=42, stratify=y)
+
+# ── Gaussian Naïve Bayes ────────────────────────────────
+class GaussianNaiveBayes:
+    def fit(self, X, y):
+        self.classes_ = np.unique(y)
+        n_samples, n_feats = X.shape
+        K = len(self.classes_)
+        self._mean      = np.zeros((K, n_feats))
+        self._var       = np.zeros((K, n_feats))
+        self._log_prior = np.zeros(K)
+        for idx, c in enumerate(self.classes_):
+            Xc = X[y == c]
+            self._mean[idx]      = Xc.mean(axis=0)
+            self._var[idx]       = Xc.var(axis=0) + 1e-9
+            self._log_prior[idx] = np.log(len(Xc) / n_samples)
+        return self
+
+    def _log_likelihood(self, k, x):
+        mu, var = self._mean[k], self._var[k]
+        return np.sum(
+            -0.5 * np.log(2 * np.pi * var)
+            - (x - mu)**2 / (2 * var))
+
+    def predict(self, X):
+        preds = []
+        for x in X:
+            log_post = [self._log_prior[k]
+                        + self._log_likelihood(k, x)
+                        for k in range(len(self.classes_))]
+            preds.append(self.classes_[np.argmax(log_post)])
+        return np.array(preds)
+
+# ── Train & Predict ─────────────────────────────────────
+gnb = GaussianNaiveBayes()
+gnb.fit(X_train, y_train)
+y_pred = gnb.predict(X_test)
+\end{lstlisting}
+
+%=============================================================
+\section{Results}
+
+\subsection{Predicted vs.\ Actual Labels (first 10 samples)}
+
+\begin{table}[H]
+\centering
+\caption{Test Set Predictions (Sample)}
+\begin{tabular}{c l l c}
+\toprule
+\textbf{\#} & \textbf{Actual} & \textbf{Predicted} & \textbf{Correct?} \\
+\midrule
+0  & setosa     & setosa     & \checkmark \\
+1  & setosa     & setosa     & \checkmark \\
+2  & versicolor & versicolor & \checkmark \\
+3  & virginica  & virginica  & \checkmark \\
+4  & setosa     & setosa     & \checkmark \\
+5  & versicolor & versicolor & \checkmark \\
+6  & versicolor & versicolor & \checkmark \\
+7  & virginica  & virginica  & \checkmark \\
+8  & setosa     & setosa     & \checkmark \\
+9  & versicolor & virginica  & $\times$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Confusion Matrix}
+
+\begin{table}[H]
+\centering
+\caption{3$\times$3 Confusion Matrix (rows = actual, columns = predicted)}
+\begin{tabular}{l|ccc}
+\toprule
+\textbf{Actual $\backslash$ Predicted} & \textit{setosa} & \textit{versicolor} & \textit{virginica} \\
+\midrule
+\textit{setosa}     & \textbf{10} & 0 & 0 \\
+\textit{versicolor} & 0 & \textbf{9} & 1 \\
+\textit{virginica}  & 0 & 1 & \textbf{9} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Two misclassifications occur between \textit{versicolor} and \textit{virginica}, which share overlapping petal dimensions — a known characteristic of the Iris dataset.
+
+\subsection{Performance Metrics}
+
+\begin{table}[H]
+\centering
+\caption{Per-class and Macro-averaged Performance Metrics}
+\begin{tabular}{l ccc}
+\toprule
+\textbf{Class} & \textbf{Precision} & \textbf{Recall} & \textbf{F1-Score} \\
+\midrule
+setosa     & 1.0000 & 1.0000 & 1.0000 \\
+versicolor & 0.9000 & 0.9000 & 0.9000 \\
+virginica  & 0.9000 & 0.9000 & 0.9000 \\
+\midrule
+\textbf{macro avg} & \textbf{0.9333} & \textbf{0.9333} & \textbf{0.9333} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{equation*}
+  \text{Overall Accuracy} = \frac{28}{30} = 93.33\%
+\end{equation*}
+
+%=============================================================
+\section{Discussion}
+
+\begin{itemize}
+  \item The Gaussian Na\"{i}ve Bayes classifier achieved \textbf{93.33\% accuracy} on the 30-sample test set.
+  \item \textit{Setosa} was classified perfectly (F1 = 1.0) due to its linearly separable petal features.
+  \item The two misclassifications occur between \textit{versicolor} and \textit{virginica}, which have overlapping feature distributions — a well-known challenge in the Iris dataset.
+  \item The independence assumption of Na\"{i}ve Bayes holds well here because the Iris features are approximately uncorrelated within each class.
+  \item Adding a Laplace smoothing term ($\varepsilon = 10^{-9}$) prevents numerical issues from zero variances.
+\end{itemize}
+
+%=============================================================
+\section{Conclusion}
+
+The Gaussian Na\"{i}ve Bayes classifier was successfully implemented from scratch using NumPy. The model correctly predicts 28 out of 30 test samples with an overall accuracy of \textbf{93.33\%}. This demonstrates that a simple probabilistic classifier with the na\"{i}ve independence assumption can perform very well on structured, low-dimensional datasets like Iris.
+
+%=============================================================
+\section{References}
+
+\begin{enumerate}[label={[\arabic*]}]
+  \item R.\ A.\ Fisher, ``The use of multiple measurements in taxonomic problems,'' \textit{Annals of Eugenics}, vol.\ 7, pp.\ 179--188, 1936.
+  \item T.\ Mitchell, \textit{Machine Learning}. McGraw-Hill, 1997.
+  \item scikit-learn developers, ``sklearn.datasets.load\_iris,'' \url{https://scikit-learn.org/stable/modules/generated/sklearn.datasets.load_iris.html}.
+\end{enumerate}
+
+\end{document}

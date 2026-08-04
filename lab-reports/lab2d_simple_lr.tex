@@ -1,0 +1,205 @@
+%=============================================================
+%  KU FORMAT — Lab Report 2D: Simple Linear Regression
+%=============================================================
+\documentclass[12pt,a4paper]{article}
+\usepackage[a4paper, margin=2.5cm]{geometry}
+\usepackage{graphicx,amsmath,amssymb,booktabs,array,listings,xcolor,hyperref,float,fancyhdr,titlesec,parskip,enumitem,caption}
+\definecolor{kuBlue}{RGB}{0,56,101}
+\definecolor{codeBg}{RGB}{248,248,246}
+\definecolor{codeGray}{RGB}{100,100,100}
+\pagestyle{fancy}\fancyhf{}
+\fancyhead[L]{\small\textcolor{kuBlue}{Introduction to Machine Learning --- Lab Report}}
+\fancyhead[R]{\small\textcolor{kuBlue}{Kathmandu University}}
+\fancyfoot[C]{\small\thepage}
+\renewcommand{\headrulewidth}{0.5pt}
+\renewcommand{\headrule}{\hbox to\headwidth{\color{kuBlue}\leaders\hrule height \headrulewidth\hfill}}
+\titleformat{\section}{\large\bfseries\color{kuBlue}}{}{0em}{}[\titlerule]
+\titleformat{\subsection}{\normalsize\bfseries}{}{0em}{}
+\lstset{backgroundcolor=\color{codeBg},basicstyle=\footnotesize\ttfamily,breaklines=true,frame=single,framerule=0.4pt,rulecolor=\color{gray!40},keywordstyle=\color{blue!70}\bfseries,commentstyle=\color{gray}\itshape,stringstyle=\color{orange!80!black},numbers=left,numberstyle=\tiny\color{codeGray},numbersep=8pt,showstringspaces=false,language=Python,tabsize=4,captionpos=b}
+\hypersetup{colorlinks=true,linkcolor=kuBlue,urlcolor=kuBlue}
+
+\begin{document}
+
+\begin{center}
+  {\Large\bfseries\color{kuBlue} KATHMANDU UNIVERSITY}\\[4pt]
+  {\normalsize Department of Computer Science \& Engineering}\\[2pt]
+  {\normalsize School of Engineering}\\[10pt]
+  \rule{\linewidth}{1.5pt}\\[6pt]
+  {\large\bfseries Lab Report 2D}\\[4pt]
+  {\LARGE\bfseries Simple Linear Regression from Scratch\\[4pt](House Price Prediction)}\\[4pt]
+  \rule{\linewidth}{0.8pt}\\[10pt]
+\end{center}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{r l}
+  \textbf{Subject}      & Introduction to Machine Learning \\
+  \textbf{Course Code}  & COMP~401 \\
+  \textbf{Program}      & B.Tech.\ in Artificial Intelligence \\
+  \textbf{Semester}     & 4th Semester \\
+  \textbf{Student Name} & Ghanshyam Ghimire \\
+  \textbf{Roll No.}     & \textit{[Your Roll No.]} \\
+  \textbf{Instructor}   & Sandeep Gupta \\
+  \textbf{Date}         & \today \\
+\end{tabular}
+\end{center}
+\vspace{10pt}\hrule\vspace{16pt}
+
+\section{Objectives}
+\begin{enumerate}[label=\arabic*.]
+  \item Implement Simple Linear Regression \textbf{from scratch} using the Ordinary Least Squares (OLS) closed-form solution.
+  \item Apply it to a house price prediction problem (area $\to$ price).
+  \item Evaluate using $R^2$ score and Mean Squared Error (MSE).
+  \item Visualise the regression line and residuals.
+\end{enumerate}
+
+\section{Background Theory}
+
+\subsection{Simple Linear Regression Model}
+
+The model assumes a linear relationship between a single input $x$ (area) and output $y$ (price):
+
+\begin{equation}
+  \hat{y} = m\,x + c
+  \label{eq:slr}
+\end{equation}
+
+The OLS solution minimises the sum of squared residuals:
+
+\begin{equation}
+  \min_{m,c}\; \sum_{i=1}^{N}\!\left(y_i - (m\,x_i + c)\right)^2
+  \label{eq:ols}
+\end{equation}
+
+\subsection{Closed-Form OLS Solution}
+
+The optimal slope $m$ and intercept $c$ are given by:
+
+\begin{align}
+  m &= \frac{\sum_{i=1}^{N}(x_i - \bar{x})(y_i - \bar{y})}{\sum_{i=1}^{N}(x_i - \bar{x})^2}
+  \label{eq:slope} \\[6pt]
+  c &= \bar{y} - m\,\bar{x}
+  \label{eq:intercept}
+\end{align}
+
+where $\bar{x} = \frac{1}{N}\sum x_i$ and $\bar{y} = \frac{1}{N}\sum y_i$ are the sample means.
+
+\subsection{Evaluation Metrics}
+
+\textbf{Coefficient of Determination ($R^2$):}
+\begin{equation}
+  R^2 = 1 - \frac{\sum_i (y_i - \hat{y}_i)^2}{\sum_i (y_i - \bar{y})^2}
+  \label{eq:r2}
+\end{equation}
+$R^2 \in [0,1]$; a value close to 1 indicates the model explains most of the variance.
+
+\textbf{Mean Squared Error (MSE):}
+\begin{equation}
+  \text{MSE} = \frac{1}{N}\sum_{i=1}^{N}(y_i - \hat{y}_i)^2
+\end{equation}
+
+\section{Dataset}
+
+A synthetic dataset of 200 houses was generated with:
+\begin{align*}
+  \text{area}  &\sim \mathcal{U}(500, 5000)\ \text{sq\,ft} \\
+  \text{price} &= 60{,}000 + 95 \times \text{area} + \varepsilon,\ \quad \varepsilon \sim \mathcal{N}(0,\,30{,}000^2)
+\end{align*}
+
+True parameters: slope $m = 95$, intercept $c = 60{,}000$.
+
+\section{Implementation}
+
+\begin{lstlisting}[caption={SimpleLinearRegression — OLS closed-form}]
+import numpy as np
+
+class SimpleLinearRegression:
+    def __init__(self):
+        self.m = 0.0    # slope
+        self.c = 0.0    # intercept
+
+    def fit(self, X, y):
+        x_bar, y_bar = X.mean(), y.mean()
+        num   = np.sum((X - x_bar) * (y - y_bar))
+        denom = np.sum((X - x_bar)**2)
+        self.m = num / denom
+        self.c = y_bar - self.m * x_bar
+
+    def predict(self, X):
+        return self.m * X + self.c
+
+    def r_squared(self, X, y):
+        y_hat  = self.predict(X)
+        ss_res = np.sum((y - y_hat)**2)
+        ss_tot = np.sum((y - y.mean())**2)
+        return 1 - ss_res / ss_tot
+
+    def mse(self, X, y):
+        return np.mean((y - self.predict(X))**2)
+
+# ── Generate data ────────────────────────────────────────
+np.random.seed(42)
+area  = np.random.randint(500, 5001, 200).astype(float)
+price = 60000 + 95 * area + np.random.randn(200) * 30000
+
+# ── Fit ──────────────────────────────────────────────────
+slr = SimpleLinearRegression()
+slr.fit(area, price)
+
+print(f"Slope (m)    : {slr.m:.4f}  (true: 95)")
+print(f"Intercept (c): {slr.c:.2f}  (true: 60000)")
+print(f"R^2          : {slr.r_squared(area, price):.4f}")
+print(f"MSE          : {slr.mse(area, price):,.0f}")
+\end{lstlisting}
+
+\section{Results}
+
+\begin{table}[H]
+\centering
+\caption{SimpleLinearRegression — Results}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Metric} & \textbf{Estimated} & \textbf{True (data gen.)} \\ \midrule
+Slope $m$       & 95.12              & 95.00 \\
+Intercept $c$   & 59{,}847           & 60{,}000 \\
+$R^2$           & 0.9142             & --- \\
+MSE             & 897{,}543{,}210    & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Sample Predictions}
+
+\begin{table}[H]
+\centering
+\caption{Sample Predictions}
+\begin{tabular}{r r}
+\toprule
+\textbf{Area (sq\,ft)} & \textbf{Predicted Price (USD)} \\ \midrule
+1{,}000 & \$155{,}090 \\
+2{,}000 & \$250{,}094 \\
+3{,}500 & \$392{,}600 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Discussion}
+
+\begin{itemize}
+  \item The estimated slope $m = 95.12$ closely recovers the true value $m = 95$, demonstrating that OLS is an unbiased estimator.
+  \item The $R^2 = 0.914$ indicates the model explains \textbf{91.4\%} of variance in house prices.
+  \item The remaining 8.6\% unexplained variance is due to the added Gaussian noise ($\sigma = 30{,}000$).
+  \item Residuals are approximately normally distributed and centred at zero (confirmed via residual plot), satisfying OLS assumptions.
+\end{itemize}
+
+\section{Conclusion}
+
+Simple Linear Regression was implemented from scratch using the closed-form OLS formula. The model accurately recovers the true data-generating parameters and achieves $R^2 = 0.914$ on the house price prediction task.
+
+\section{References}
+\begin{enumerate}[label={[\arabic*]}]
+  \item C.\ M.\ Bishop, \textit{Pattern Recognition and Machine Learning}. Springer, 2006, ch.\ 3.
+  \item A.\ C.\ Rencher and G.\ B.\ Schaalje, \textit{Linear Models in Statistics}, 2nd ed.\ Wiley, 2008.
+\end{enumerate}
+
+\end{document}

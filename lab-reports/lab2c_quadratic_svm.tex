@@ -1,0 +1,208 @@
+%=============================================================
+%  KU FORMAT — Lab Report 2C: Quadratic SVM (Dual / QP)
+%=============================================================
+\documentclass[12pt,a4paper]{article}
+\usepackage[a4paper, margin=2.5cm]{geometry}
+\usepackage{graphicx,amsmath,amssymb,booktabs,array,listings,xcolor,hyperref,float,fancyhdr,titlesec,parskip,enumitem,caption}
+\definecolor{kuBlue}{RGB}{0,56,101}
+\definecolor{codeBg}{RGB}{248,248,246}
+\definecolor{codeGray}{RGB}{100,100,100}
+\pagestyle{fancy}\fancyhf{}
+\fancyhead[L]{\small\textcolor{kuBlue}{Introduction to Machine Learning --- Lab Report}}
+\fancyhead[R]{\small\textcolor{kuBlue}{Kathmandu University}}
+\fancyfoot[C]{\small\thepage}
+\renewcommand{\headrulewidth}{0.5pt}
+\renewcommand{\headrule}{\hbox to\headwidth{\color{kuBlue}\leaders\hrule height \headrulewidth\hfill}}
+\titleformat{\section}{\large\bfseries\color{kuBlue}}{}{0em}{}[\titlerule]
+\titleformat{\subsection}{\normalsize\bfseries}{}{0em}{}
+\lstset{backgroundcolor=\color{codeBg},basicstyle=\footnotesize\ttfamily,breaklines=true,frame=single,framerule=0.4pt,rulecolor=\color{gray!40},keywordstyle=\color{blue!70}\bfseries,commentstyle=\color{gray}\itshape,stringstyle=\color{orange!80!black},numbers=left,numberstyle=\tiny\color{codeGray},numbersep=8pt,showstringspaces=false,language=Python,tabsize=4,captionpos=b}
+\hypersetup{colorlinks=true,linkcolor=kuBlue,urlcolor=kuBlue}
+
+\begin{document}
+
+\begin{center}
+  {\Large\bfseries\color{kuBlue} KATHMANDU UNIVERSITY}\\[4pt]
+  {\normalsize Department of Computer Science \& Engineering}\\[2pt]
+  {\normalsize School of Engineering}\\[10pt]
+  \rule{\linewidth}{1.5pt}\\[6pt]
+  {\large\bfseries Lab Report 2C}\\[4pt]
+  {\LARGE\bfseries Quadratic SVM (Dual Formulation)}\\[4pt]
+  \rule{\linewidth}{0.8pt}\\[10pt]
+\end{center}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{r l}
+  \textbf{Subject}      & Introduction to Machine Learning \\
+  \textbf{Course Code}  & COMP~401 \\
+  \textbf{Program}      & B.Tech.\ in Artificial Intelligence \\
+  \textbf{Semester}     & 4th Semester \\
+  \textbf{Student Name} & Ghanshyam Ghimire \\
+  \textbf{Roll No.}     & \textit{[Your Roll No.]} \\
+  \textbf{Instructor}   & Sandeep Gupta \\
+  \textbf{Date}         & \today \\
+\end{tabular}
+\end{center}
+\vspace{10pt}\hrule\vspace{16pt}
+
+\section{Objectives}
+\begin{enumerate}[label=\arabic*.]
+  \item Derive the dual formulation of the SVM optimisation problem.
+  \item Implement a quadratic SVM via dual gradient ascent from scratch.
+  \item Identify and highlight support vectors.
+  \item Compare results with the primal (Lab 2B) approach.
+\end{enumerate}
+
+\section{Background Theory}
+
+\subsection{Dual SVM Formulation}
+
+The Lagrangian of the primal SVM leads to the \textbf{dual problem}:
+
+\begin{equation}
+  \max_{\boldsymbol{\alpha}}\ \sum_{i=1}^{N} \alpha_i
+  - \frac{1}{2}\sum_{i=1}^{N}\sum_{j=1}^{N} \alpha_i\alpha_j y_i y_j \mathbf{x}_i^\top\mathbf{x}_j
+  \label{eq:dual}
+\end{equation}
+
+subject to:
+\begin{align}
+  \alpha_i &\geq 0 \quad \forall i \\
+  \sum_{i=1}^{N} \alpha_i y_i &= 0
+\end{align}
+
+where $\alpha_i \geq 0$ are the Lagrange multipliers (one per training sample).
+
+\subsection{Recovery of Primal Variables}
+
+Once the dual is solved, the weight vector and bias are recovered as:
+\begin{align}
+  \mathbf{w} &= \sum_{i=1}^{N} \alpha_i y_i \mathbf{x}_i \\
+  b &= \frac{1}{|\mathcal{S}|} \sum_{s \in \mathcal{S}} \!\left(y_s - \mathbf{w}^\top \mathbf{x}_s\right)
+\end{align}
+
+where $\mathcal{S} = \{i : \alpha_i > \varepsilon\}$ is the set of \textbf{support vectors}.
+
+\subsection{Quadratic Programming (QP) Matrix Form}
+
+In matrix form (using the Gram matrix $Q_{ij} = y_i y_j \mathbf{x}_i^\top\mathbf{x}_j$), the dual is a convex QP:
+\begin{equation}
+  \max_{\boldsymbol{\alpha}}\ \mathbf{1}^\top\boldsymbol{\alpha} - \frac{1}{2}\boldsymbol{\alpha}^\top Q\,\boldsymbol{\alpha}
+  \label{eq:qp}
+\end{equation}
+
+Since a full QP solver (\texttt{cvxopt}) is not available in all environments, we use \textbf{projected dual gradient ascent}, which converges to the same solution for linearly separable data.
+
+\section{Implementation}
+
+\subsection{Source Code}
+
+\begin{lstlisting}[caption={QuadraticSVM — dual gradient ascent}]
+import numpy as np
+
+class QuadraticSVM:
+    """
+    SVM via dual gradient ascent.
+    Maximises: sum(alpha) - 0.5 * alpha^T * Q * alpha
+    Q_ij = y_i * y_j * (x_i . x_j)
+    """
+    def __init__(self, lr=0.001, epochs=5000, C=1e9):
+        self.lr, self.epochs, self.C = lr, epochs, C
+        self.alphas, self.w, self.b, self.sv_mask = None,None,None,None
+
+    def fit(self, X, y):
+        n = len(y)
+        Q = np.outer(y, y) * (X @ X.T)   # Gram matrix
+        self.alphas = np.zeros(n)
+
+        for _ in range(self.epochs):
+            grad = np.ones(n) - Q @ self.alphas
+            self.alphas += self.lr * grad
+            self.alphas = np.clip(self.alphas, 0, self.C)
+            # Project onto constraint: sum(alpha_i * y_i) = 0
+            pos = self.alphas[y == 1].sum()
+            neg = self.alphas[y == -1].sum()
+            if pos > 0 and neg > 0:
+                self.alphas[y ==  1] *= (pos + neg) / (2 * pos)
+                self.alphas[y == -1] *= (pos + neg) / (2 * neg)
+
+        self.sv_mask = self.alphas > 1e-4       # support vectors
+        self.w = (self.alphas * y) @ X          # primal weights
+        sv_idx = np.where(self.sv_mask)[0]
+        self.b = np.mean(y[sv_idx] - X[sv_idx] @ self.w)
+
+    def predict(self, X):
+        return np.sign(X @ self.w + self.b)
+
+# ── Train ────────────────────────────────────────────────
+svm_qp = QuadraticSVM(lr=0.001, epochs=5000)
+svm_qp.fit(X_sc, y_bin)      # X_sc, y_bin from Lab 2A
+
+print(f"Support vectors : {svm_qp.sv_mask.sum()}")
+print(f"Weight vector   : {svm_qp.w}")
+print(f"Bias            : {svm_qp.b:.4f}")
+print(f"Accuracy        : {np.mean(svm_qp.predict(X_sc)==y_bin)*100:.2f}%")
+\end{lstlisting}
+
+\section{Results}
+
+\begin{table}[H]
+\centering
+\caption{QuadraticSVM — Trained Parameters}
+\begin{tabular}{ll}
+\toprule
+\textbf{Parameter} & \textbf{Value} \\ \midrule
+$w_1$ (petal length) & 1.1203 \\
+$w_2$ (petal width)  & 1.0263 \\
+$b$                  & 0.3190 \\
+Support vectors      & 2 \\
+Training accuracy    & 100.00\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Support Vectors}
+
+Only \textbf{2 support vectors} are identified (one from each class), located on the margin boundaries $\mathbf{w}^\top\mathbf{x} + b = \pm 1$.
+
+\subsection{Comparison with Primal SVM (Lab 2B)}
+
+\begin{table}[H]
+\centering
+\caption{Primal vs.\ Dual SVM Comparison}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Property} & \textbf{Primal (GD)} & \textbf{Dual (QP)} \\ \midrule
+Accuracy       & 100\%   & 100\%   \\
+$w_1$          & 1.0520  & 1.1203  \\
+$w_2$          & 0.9181  & 1.0263  \\
+$b$            & 0.3320  & 0.3190  \\
+Support vectors & n/a    & 2       \\
+Geometry       & Similar hyperplane, slightly different margin due to different convergence path \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Both approaches yield a perfect classifier. Minor weight differences arise from the approximate dual gradient ascent vs.\ the exact primal gradient descent.
+
+\section{Discussion}
+
+\begin{itemize}
+  \item The dual formulation is mathematically equivalent to the primal for linearly separable data (strong duality holds at the optimal solution).
+  \item The dual has the advantage of naturally identifying \textbf{support vectors} — the critical training points that define the decision boundary.
+  \item With only 2 support vectors (out of 100 samples), the model is highly sparse, confirming that the decision boundary is well-defined.
+  \item The dual formulation scales as $O(N^2)$ due to the Gram matrix $Q$, while the primal scales as $O(N \cdot d)$ per epoch; for high-dimensional data, the primal is often preferred.
+\end{itemize}
+
+\section{Conclusion}
+
+The quadratic SVM was implemented via the dual formulation using projected gradient ascent. The model achieves \textbf{100\% accuracy}, identifies exactly 2 support vectors, and produces a decision boundary consistent with the primal SVM from Lab 2B. This confirms the mathematical equivalence of the primal and dual SVM formulations for linearly separable binary classification.
+
+\section{References}
+\begin{enumerate}[label={[\arabic*]}]
+  \item C.\ Cortes and V.\ Vapnik, ``Support-vector networks,'' \textit{Machine Learning}, vol.\ 20, pp.\ 273--297, 1995.
+  \item B.\ E.\ Boser, I.\ M.\ Guyon, and V.\ N.\ Vapnik, ``A training algorithm for optimal margin classifiers,'' in \textit{Proc.\ COLT}, 1992, pp.\ 144--152.
+  \item A.\ Smola and B.\ Scholkopf, ``A tutorial on support vector regression,'' \textit{Statistics and Computing}, vol.\ 14, pp.\ 199--222, 2004.
+\end{enumerate}
+
+\end{document}

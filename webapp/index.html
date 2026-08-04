@@ -3,78 +3,183 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Lab Assignment 1 — Ghanshyam Ghimire</title>
+  <title>ML Lab — Ghanshyam Ghimire</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-  <!-- ── TOP STRIP ───────────────────────────────────────────────────── -->
-  <div id="top-strip">
-    <span>Introduction to Machine Learning &nbsp;/&nbsp; Lab Report</span>
-    <span>Kathmandu University</span>
-  </div>
-
-  <!-- ── HEADER ──────────────────────────────────────────────────────── -->
-  <header id="lab-header">
-    <div class="header-inner">
-      <div class="header-left">
-        <div class="nb-icon" aria-hidden="true">
-          <span class="nb-icon-bar bar1"></span>
-          <span class="nb-icon-bar bar2"></span>
-          <span class="nb-icon-bar bar3"></span>
-        </div>
-        <div class="header-text">
-          <div class="notebook-name">lab_assignment_1_naive_bayes_iris.ipynb</div>
-          <div class="course-meta">
-            <span class="meta-item">Ghanshyam Ghimire</span>
-            <span class="meta-sep">·</span>
-            <span class="meta-item">BTech Artificial Intelligence, 4th Semester</span>
-            <span class="meta-sep">·</span>
-            <span class="meta-item">Instructor: Sandeep Gupta</span>
-          </div>
-        </div>
+  <!-- ── TOP BAR ─────────────────────────────────────────────────────── -->
+  <header id="topbar">
+    <div class="topbar-inner">
+      <div class="topbar-left">
+        <!-- Back / breadcrumb — hidden on home -->
+        <button class="back-btn" id="back-btn" style="display:none" onclick="goHome()">
+          ← Back to Home
+        </button>
+        <span class="topbar-brand" id="topbar-brand">ML Lab Assignments</span>
       </div>
-      <div class="header-right">
-        <div class="kernel-badge">
+      <div class="topbar-right">
+        <div class="kernel-badge" id="kernel-badge" style="display:none">
           <span class="kernel-dot" id="kernel-dot"></span>
           <span id="kernel-label">Python 3 (idle)</span>
         </div>
+        <a class="icon-btn" href="https://github.com/ghanshyamghimiregg/ml-lab-assignment1"
+           target="_blank" rel="noopener" title="GitHub">
+          <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.65 7.65 0 012 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        </a>
       </div>
     </div>
   </header>
 
-  <!-- ── MENU BAR ────────────────────────────────────────────────────── -->
-  <div id="menubar">
-    <div class="menubar-inner">
-      <div class="menubar-left">
-        <button class="menu-item" id="run-all-btn">&#9654;&nbsp; Run All</button>
-        <div class="menu-sep"></div>
-        <button class="menu-item" id="restart-btn">&#8635;&nbsp; Restart Kernel</button>
-      </div>
-      <div class="menubar-right">
-        <button class="menu-item dl-btn" id="download-data-btn">&#8595; iris_dataset.csv</button>
-        <button class="menu-item dl-btn" id="download-code-btn">&#8595; naive_bayes.py</button>
-        <button class="menu-item dl-btn dl-primary" id="download-btn">&#8595; Download .ipynb</button>
-        <a class="menu-item github-btn" href="https://github.com/ghanshyamghimiregg/ml-lab-assignment1" target="_blank" rel="noopener"><svg class="gh-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.65 7.65 0 012 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg> GitHub</a>
-      </div>
-    </div>
-  </div>
-
   <!-- ── PYODIDE BANNER ──────────────────────────────────────────────── -->
   <div id="pyodide-banner">
-    <span id="pyodide-banner-text">Loading Pyodide &amp; packages — first run takes ~15s...</span>
+    <span id="pyodide-banner-text">Loading Pyodide — first run takes ~20s…</span>
     <div id="pyodide-progress"><div id="pyodide-bar"></div></div>
   </div>
 
-  <!-- ── NOTEBOOK ────────────────────────────────────────────────────── -->
-  <main id="notebook-wrap">
-    <div id="notebook">
-      <!-- rendered by app.js -->
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <!--  PAGE: HOME                                                        -->
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <div id="page-home">
+    <div class="home-inner">
+
+      <!-- Hero -->
+      <div class="home-hero">
+        <div class="home-hero-dot"></div>
+        <div>
+          <h1 class="home-title">ML Lab Assignments</h1>
+          <p class="home-subtitle">
+            Introduction to Machine Learning &nbsp;·&nbsp;
+            Kathmandu University, BTech AI, Sem 4
+          </p>
+          <p class="home-meta">Ghanshyam Ghimire &nbsp;·&nbsp; Instructor: Sandeep Gupta</p>
+        </div>
+      </div>
+
+      <!-- Lab cards -->
+      <p class="home-choose">Choose an assignment to explore</p>
+      <div class="home-cards">
+
+        <div class="lab-card" onclick="openLab('lab1')">
+          <div class="lab-card-num">01</div>
+          <div class="lab-card-body">
+            <h2 class="lab-card-title">Naïve Bayes</h2>
+            <p class="lab-card-desc">Gaussian Naïve Bayes from scratch · 3-class Iris classification</p>
+            <div class="lab-card-tags">
+              <span class="tag">Classification</span>
+              <span class="tag">Iris Dataset</span>
+              <span class="tag">93.33% Accuracy</span>
+            </div>
+          </div>
+          <span class="lab-card-arrow">→</span>
+        </div>
+
+        <div class="lab-card" onclick="openLab('lab2')">
+          <div class="lab-card-num">02</div>
+          <div class="lab-card-body">
+            <h2 class="lab-card-title">SVM &amp; Linear Regression</h2>
+            <p class="lab-card-desc">LinearSVM · Quadratic SVM (dual) · Simple &amp; Multiple LR from scratch</p>
+            <div class="lab-card-tags">
+              <span class="tag">SVM</span>
+              <span class="tag">Regression</span>
+              <span class="tag">6 Sub-reports</span>
+              <span class="tag">100% SVM Accuracy</span>
+            </div>
+          </div>
+          <span class="lab-card-arrow">→</span>
+        </div>
+
+      </div>
+
+      <div class="home-footer-note">
+        Click a card to open the full lab — code, report, data, and results.
+      </div>
     </div>
-    <div id="notebook-footer">
-      Kernel: Python 3.11 &nbsp;·&nbsp; Ghanshyam Ghimire, KU AI Sem 4
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <!--  PAGE: LAB DETAIL                                                  -->
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <div id="page-lab" style="display:none">
+
+    <!-- Sub-nav (only shows on Lab 2) -->
+    <nav id="subnav" style="display:none">
+      <div class="subnav-inner">
+        <button class="subnav-btn active" data-sub="overview">Overview</button>
+        <button class="subnav-btn" data-sub="2a">2A — Data</button>
+        <button class="subnav-btn" data-sub="2b">2B — Linear SVM</button>
+        <button class="subnav-btn" data-sub="2c">2C — Quad SVM</button>
+        <button class="subnav-btn" data-sub="2d">2D — Simple LR</button>
+        <button class="subnav-btn" data-sub="2e">2E — Multiple LR</button>
+        <button class="subnav-btn" data-sub="2f">2F — Comparison</button>
+      </div>
+    </nav>
+
+    <!-- Lab toolbar -->
+    <div id="lab-toolbar">
+      <div class="toolbar-inner">
+        <div class="toolbar-info">
+          <span class="toolbar-title" id="toolbar-title"></span>
+          <span class="toolbar-sub"   id="toolbar-sub"></span>
+        </div>
+        <div class="toolbar-actions">
+          <button class="action-btn" id="run-all-btn">▶ Run All</button>
+          <button class="action-btn secondary" id="restart-btn">⟳ Restart</button>
+          <button class="pill-btn" id="dl-ipynb-btn">↓ .ipynb</button>
+          <button class="pill-btn" id="dl-code-btn">↓ .py</button>
+        </div>
+      </div>
     </div>
-  </main>
+
+    <!-- Content sections -->
+    <div id="lab-content">
+
+      <!-- SECTION: Lab Report -->
+      <section class="content-section" id="sec-report">
+        <div class="section-header">
+          <span class="section-icon">📋</span>
+          <h2 class="section-title">Lab Report</h2>
+          <div class="section-header-actions">
+            <button class="pill-btn" id="dl-latex-btn">↓ LaTeX</button>
+          </div>
+        </div>
+        <div class="section-body" id="report-body"></div>
+      </section>
+
+      <!-- SECTION: Datasets -->
+      <section class="content-section" id="sec-data">
+        <div class="section-header">
+          <span class="section-icon">🗂</span>
+          <h2 class="section-title">Datasets</h2>
+        </div>
+        <div class="section-body" id="data-body"></div>
+      </section>
+
+      <!-- SECTION: Notebook -->
+      <section class="content-section full-width" id="sec-notebook">
+        <div class="section-header">
+          <span class="section-icon">📓</span>
+          <h2 class="section-title">Notebook</h2>
+          <span class="section-subtitle" id="notebook-filename"></span>
+        </div>
+        <div class="section-body" id="notebook"></div>
+      </section>
+
+      <!-- SECTION: Results -->
+      <section class="content-section full-width" id="sec-results">
+        <div class="section-header">
+          <span class="section-icon">📊</span>
+          <h2 class="section-title">Results &amp; Graphs</h2>
+        </div>
+        <div class="section-body" id="results-body"></div>
+      </section>
+
+    </div><!-- /lab-content -->
+  </div><!-- /page-lab -->
+
+  <footer id="site-footer">
+    <span>Introduction to Machine Learning · Kathmandu University · 2026</span>
+  </footer>
 
   <script src="app.js"></script>
 </body>

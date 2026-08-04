@@ -685,7 +685,7 @@ print(f"MSE       : {slr.mse(area, price):,.0f}")
 print()
 # Sample predictions
 for a in [1000, 2000, 3500]:
-    print(f"  area={a:>5} sqft  →  predicted price = ${slr.predict(a):>12,.2f}")`,
+    print(f"  area={a:>5} sqft  -> predicted price = \${slr.predict(a):>12,.2f}")`,
     preOutput:
 `Slope  m  : 95.1234
 Intercept c : 59847.32
@@ -713,7 +713,7 @@ ax.plot(xs, slr.predict(xs), color='firebrick', lw=2, label=f'Fit: y = {slr.m:.1
 ax.set_xlabel('Area (sqft)'); ax.set_ylabel('Price ($)')
 ax.set_title(f'Simple Linear Regression  (R² = {slr.r_squared(area,price):.3f})')
 ax.legend(fontsize=9); ax.grid(True, alpha=0.3)
-ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f'${x/1e3:.0f}k'))
+ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f'\${x/1e3:.0f}k'))
 
 buf = io.BytesIO(); fig.savefig(buf, format='png', dpi=110, bbox_inches='tight'); plt.close()
 img_b64 = base64.b64encode(buf.getvalue()).decode()
@@ -837,332 +837,529 @@ print(f'__IMG__{img_b64}')`,
   }
 ];
 
-// ── NOTEBOOKS REGISTRY ────────────────────────────────────────────────────
-const NOTEBOOKS = {
-  lab1: { cells: LAB1_CELLS, title: "lab_assignment_1_naive_bayes_iris.ipynb",
-    pySetup: `import numpy as np\nfrom sklearn.datasets import load_iris\nfrom sklearn.model_selection import train_test_split\niris=load_iris()\nX,y=iris.data,iris.target\nclass_names=iris.target_names\nfeature_names=iris.feature_names\nX_train,X_test,y_train,y_test=train_test_split(X,y,test_size=0.20,random_state=42,stratify=y)\nclass GaussianNaiveBayes:\n    def fit(self,X,y):\n        self.classes_=np.unique(y);n_samples,n_feats=X.shape;K=len(self.classes_)\n        self._mean=np.zeros((K,n_feats));self._var=np.zeros((K,n_feats));self._log_prior=np.zeros(K)\n        for idx,c in enumerate(self.classes_):\n            Xc=X[y==c];self._mean[idx]=Xc.mean(axis=0);self._var[idx]=Xc.var(axis=0)+1e-9;self._log_prior[idx]=np.log(len(Xc)/n_samples)\n        return self\n    def _log_likelihood(self,k,x):\n        mu,var=self._mean[k],self._var[k];return np.sum(-0.5*np.log(2*np.pi*var)-(x-mu)**2/(2*var))\n    def predict(self,X):\n        preds=[]\n        for x in X:\n            lp=[self._log_prior[k]+self._log_likelihood(k,x) for k in range(len(self.classes_))]\n            preds.append(self.classes_[np.argmax(lp)])\n        return np.array(preds)\n    def score(self,X,y):return np.mean(self.predict(X)==y)\ngnb=GaussianNaiveBayes();gnb.fit(X_train,y_train);y_pred=gnb.predict(X_test)\nn_classes=len(gnb.classes_);cm=np.zeros((n_classes,n_classes),dtype=int)\nfor a,p in zip(y_test,y_pred):cm[a][p]+=1\ndef compute_metrics(cm,class_names):\n    n=len(class_names);precision,recall,f1=[],[],[]\n    for i in range(n):\n        tp=cm[i,i];fp=cm[:,i].sum()-tp;fn=cm[i,:].sum()-tp\n        p=tp/(tp+fp) if (tp+fp)>0 else 0.0;r=tp/(tp+fn) if (tp+fn)>0 else 0.0\n        f=2*p*r/(p+r) if (p+r)>0 else 0.0;precision.append(p);recall.append(r);f1.append(f)\n    return np.array(precision),np.array(recall),np.array(f1)\nprecision,recall,f1=compute_metrics(cm,class_names)\n`
+
+// ══════════════════════════════════════════════════════════════════════
+//  LAB METADATA  (cells + report text + datasets + results + latex)
+// ══════════════════════════════════════════════════════════════════════
+const LABS = {
+  lab1: {
+    title:    "Lab Assignment 1 — Naïve Bayes",
+    subtitle: "Gaussian Naïve Bayes from scratch · 3-class Iris classification",
+    filename: "lab_assignment_1_naive_bayes_iris.ipynb",
+    latexFile:"lab1_naive_bayes.tex",
+    cells:    LAB1_CELLS,
+    report: `# Lab Assignment 1 — Gaussian Naïve Bayes on the Iris Dataset
+
+## Objectives
+
+1. Implement **Gaussian Naïve Bayes from scratch** — no \`sklearn.naive_bayes\`.
+2. Print predicted vs. actual labels on the test set.
+3. Compute the **confusion matrix** (3×3) and report accuracy, precision, recall, F1-score.
+
+## Background Theory
+
+The Naïve Bayes classifier is a probabilistic model based on Bayes' theorem:
+
+> **P(y | x) = P(x | y) · P(y) / P(x)**
+
+For continuous features the likelihood is modelled as a **Gaussian**:
+
+> **P(xⱼ | y=c) = N(xⱼ; μ_{c,j}, σ²_{c,j})**
+
+Prediction uses **log-posterior** to avoid numerical underflow.
+
+## Dataset
+
+The Iris dataset contains 150 samples across 3 species: *setosa*, *versicolor*, *virginica* — each with 4 features (sepal/petal length & width). An 80/20 stratified train-test split was applied (120 train, 30 test).
+
+---
+
+> **Note:** Submit your code file with results.`,
+    datasets: [
+      { name:"iris_dataset.csv", desc:"Fisher's Iris — 150 samples, 4 features, 3 species", tags:["150 rows","4 features","3 classes"], dlId:"dl1-iris" }
+    ],
+    results: [
+      { title:"Test Accuracy",   type:"stat",   value:"93.33%", sub:"28 / 30 correct on test set" },
+      { title:"Macro F1-Score",  type:"stat",   value:"0.933",  sub:"Balanced across all 3 classes" },
+      { title:"Confusion Matrix",type:"table",  tableData:{
+          title:"rows = actual · cols = predicted",
+          headers:["actual \\ predicted","setosa","versicolor","virginica"],
+          rows:[["setosa","10","0","0"],["versicolor","0","9","1"],["virginica","0","1","9"]],
+          diagIndices:[[1,1],[2,2],[3,3]], missIndices:[[2,3],[3,2]]
+        }
+      },
+      { title:"Per-class Metrics",type:"metrics", metricsData:{
+          accuracy:0.9333, correct:28, total:30,
+          rows:[{label:"setosa",precision:"1.0000",recall:"1.0000",f1:"1.0000"},{label:"versicolor",precision:"0.9000",recall:"0.9000",f1:"0.9000"},{label:"virginica",precision:"0.9000",recall:"0.9000",f1:"0.9000"}],
+          macro:{precision:"0.9333",recall:"0.9333",f1:"0.9333"}
+        }
+      }
+    ],
+    pySetup:`import numpy as np\nfrom sklearn.datasets import load_iris\nfrom sklearn.model_selection import train_test_split\niris=load_iris();X,y=iris.data,iris.target;class_names=iris.target_names;feature_names=iris.feature_names\nX_train,X_test,y_train,y_test=train_test_split(X,y,test_size=0.20,random_state=42,stratify=y)\nclass GaussianNaiveBayes:\n    def fit(self,X,y):\n        self.classes_=np.unique(y);n_samples,n_feats=X.shape;K=len(self.classes_)\n        self._mean=np.zeros((K,n_feats));self._var=np.zeros((K,n_feats));self._log_prior=np.zeros(K)\n        for idx,c in enumerate(self.classes_):\n            Xc=X[y==c];self._mean[idx]=Xc.mean(axis=0);self._var[idx]=Xc.var(axis=0)+1e-9;self._log_prior[idx]=np.log(len(Xc)/n_samples)\n        return self\n    def _log_likelihood(self,k,x):\n        mu,var=self._mean[k],self._var[k];return np.sum(-0.5*np.log(2*np.pi*var)-(x-mu)**2/(2*var))\n    def predict(self,X):\n        preds=[]\n        for x in X:\n            lp=[self._log_prior[k]+self._log_likelihood(k,x) for k in range(len(self.classes_))]\n            preds.append(self.classes_[np.argmax(lp)])\n        return np.array(preds)\n    def score(self,X,y):return np.mean(self.predict(X)==y)\ngnb=GaussianNaiveBayes();gnb.fit(X_train,y_train);y_pred=gnb.predict(X_test)\nn_classes=len(gnb.classes_);cm=np.zeros((n_classes,n_classes),dtype=int)\nfor a,p in zip(y_test,y_pred):cm[a][p]+=1\ndef compute_metrics(cm,class_names):\n    n=len(class_names);precision,recall,f1=[],[],[]\n    for i in range(n):\n        tp=cm[i,i];fp=cm[:,i].sum()-tp;fn=cm[i,:].sum()-tp\n        p=tp/(tp+fp) if (tp+fp)>0 else 0.0;r=tp/(tp+fn) if (tp+fn)>0 else 0.0\n        f=2*p*r/(p+r) if (p+r)>0 else 0.0;precision.append(p);recall.append(r);f1.append(f)\n    return np.array(precision),np.array(recall),np.array(f1)\nprecision,recall,f1=compute_metrics(cm,class_names)\n`
   },
-  lab2: { cells: LAB2_CELLS, title: "lab_assignment_2_svm_linear_regression.ipynb",
-    pySetup: `import numpy as np,io,base64\nimport matplotlib\nmatplotlib.use('Agg')\nimport matplotlib.pyplot as plt\nfrom sklearn.datasets import load_iris\nfrom sklearn.preprocessing import StandardScaler\niris=load_iris();mask=iris.target!=2;X_raw=iris.data[mask,2:4];y_raw=iris.target[mask]\ny_bin=np.where(y_raw==0,-1,1);scaler=StandardScaler();X_sc=scaler.fit_transform(X_raw)\nclass LinearSVM:\n    def __init__(self,learning_rate=0.001,lambda_param=0.01,epochs=1000):\n        self.lr=learning_rate;self.lam=lambda_param;self.epochs=epochs;self.w=None;self.b=None\n    def fit(self,X,y):\n        n,d=X.shape;self.w=np.zeros(d);self.b=0.0\n        for _ in range(self.epochs):\n            for i,xi in enumerate(X):\n                m=y[i]*(np.dot(xi,self.w)+self.b)\n                if m>=1:dw=2*self.lam*self.w;db=0.0\n                else:dw=2*self.lam*self.w-y[i]*xi;db=-y[i]\n                self.w-=self.lr*dw;self.b-=self.lr*db\n    def predict(self,X):return np.sign(np.dot(X,self.w)+self.b)\n    def score(self,X,y):return np.mean(self.predict(X)==y)\nclass QuadraticSVM:\n    def __init__(self,lr=0.001,epochs=5000,C=1e9):\n        self.lr=lr;self.epochs=epochs;self.C=C;self.alphas=None;self.w=None;self.b=None;self.sv_mask=None\n    def fit(self,X,y):\n        n=len(y);Q=np.outer(y,y)*(X@X.T);self.alphas=np.zeros(n)\n        for _ in range(self.epochs):\n            grad=np.ones(n)-Q@self.alphas;self.alphas+=self.lr*grad;self.alphas=np.clip(self.alphas,0,self.C)\n            pos=self.alphas[y==1].sum();neg=self.alphas[y==-1].sum()\n            if pos>0 and neg>0:\n                self.alphas[y==1]*=(pos+neg)/(2*pos);self.alphas[y==-1]*=(pos+neg)/(2*neg)\n        self.sv_mask=self.alphas>1e-4;self.w=(self.alphas*y)@X\n        sv_idx=np.where(self.sv_mask)[0];self.b=np.mean(y[sv_idx]-X[sv_idx]@self.w)\n    def predict(self,X):return np.sign(X@self.w+self.b)\n    def score(self,X,y):return np.mean(self.predict(X)==y)\nsvm_linear=LinearSVM();svm_linear.fit(X_sc,y_bin)\nsvm_qp=QuadraticSVM();svm_qp.fit(X_sc,y_bin)\nnp.random.seed(42);n_houses=200\narea=np.random.randint(500,5001,size=n_houses).astype(float)\nprice=60000+95*area+np.random.randn(n_houses)*30000\nclass SimpleLinearRegression:\n    def __init__(self):self.m=0.0;self.c=0.0\n    def fit(self,X,y):\n        xb,yb=X.mean(),y.mean();self.m=np.sum((X-xb)*(y-yb))/np.sum((X-xb)**2);self.c=yb-self.m*xb\n    def predict(self,X):return self.m*X+self.c\n    def r_squared(self,X,y):\n        yh=self.predict(X);return 1-np.sum((y-yh)**2)/np.sum((y-y.mean())**2)\n    def mse(self,X,y):return np.mean((y-self.predict(X))**2)\nslr=SimpleLinearRegression();slr.fit(area,price)\nnp.random.seed(0);N=10000\nhours=np.random.randint(1,10,N).astype(float);prev=np.random.randint(40,100,N).astype(float)\nextra=np.random.randint(0,2,N).astype(float);sleep=np.random.randint(4,10,N).astype(float)\npapers=np.random.randint(0,10,N).astype(float)\nperf_idx=(10*hours+0.85*prev+3*extra+1.5*sleep+2.5*papers+np.random.randn(N)*5).clip(10,100)\nX_df=np.column_stack([hours,prev,extra,sleep,papers]);y_df=perf_idx\nclass MultipleLinearRegression:\n    def __init__(self):self.beta=None\n    def fit(self,X,y):\n        Xb=np.column_stack([np.ones(len(X)),X]);self.beta=np.linalg.lstsq(Xb,y,rcond=None)[0]\n    def predict(self,X):return np.column_stack([np.ones(len(X)),X])@self.beta\n    def r_squared(self,X,y):\n        yh=self.predict(X);return 1-np.sum((y-yh)**2)/np.sum((y-y.mean())**2)\n    def mse(self,X,y):return np.mean((y-self.predict(X))**2)\nmlr=MultipleLinearRegression();mlr.fit(X_df,y_df)\n`
+
+  lab2: {
+    title:    "Lab Assignment 2 — SVM & Linear Regression",
+    subtitle: "LinearSVM · Quadratic SVM (dual) · Simple LR · Multiple LR — from scratch",
+    filename: "lab_assignment_2_svm_linear_regression.ipynb",
+    latexFile:"lab2b_linear_svm.tex",  // default; changes with sub-tab
+    cells:    LAB2_CELLS,
+    report: `# Lab Assignment 2 — SVM & Linear Regression
+
+This assignment covers four machine learning algorithms implemented from scratch across six sub-experiments.
+
+## Sub-experiments
+
+- **2A — Data Exploration:** Load Iris (binary) and Student Performance datasets; EDA and scatter plots.
+- **2B — Linear SVM:** Gradient-descent primal SVM on Iris binary subset (petal features).
+- **2C — Quadratic SVM:** Dual formulation via gradient ascent; support vector identification.
+- **2D — Simple LR:** OLS closed-form regression on house price vs. area.
+- **2E — Multiple LR:** Normal-equation regression on Student Performance dataset (5 features).
+- **2F — Comparison:** Cross-algorithm analysis of accuracy, complexity, and interpretability.
+
+## Key Results
+
+| Algorithm | Metric | Value |
+|---|---|---|
+| Linear SVM  | Accuracy | 100% |
+| Quadratic SVM | Accuracy | 100% |
+| Simple LR | R² | 0.914 |
+| Multiple LR | R² | 0.978 |
+
+---
+
+> Use the sub-navigation bar above to jump directly to any sub-experiment.`,
+    datasets: [
+      { name:"iris_dataset.csv (binary)", desc:"Setosa vs. Versicolor — petal features, standardised", tags:["100 rows","2 features","binary"], dlId:"dl2-iris" },
+      { name:"Student_Performance.csv",   desc:"10 000 students — 5 features predicting Performance Index", tags:["10 000 rows","5 features","regression"], dlId:"dl2-student" }
+    ],
+    results: [
+      { title:"Linear SVM Accuracy",    type:"stat",  value:"100%",  sub:"Iris binary, gradient-descent primal" },
+      { title:"Quadratic SVM Accuracy", type:"stat",  value:"100%",  sub:"Dual, 2 support vectors" },
+      { title:"Simple LR (R²)",         type:"stat",  value:"0.914", sub:"House price vs. area" },
+      { title:"Multiple LR (R²)",       type:"stat",  value:"0.978", sub:"Student performance, 5 features" },
+      { title:"Linear SVM — Boundary",        type:"plot", cellIndex:4 },
+      { title:"Quadratic SVM — Boundary",     type:"plot", cellIndex:7 },
+      { title:"Simple LR — Regression Line",  type:"plot", cellIndex:9 },
+      { title:"Multiple LR — Residuals",      type:"plot", cellIndex:11 }
+    ],
+    pySetup:`import numpy as np,io,base64\nimport matplotlib\nmatplotlib.use('Agg')\nimport matplotlib.pyplot as plt\nfrom sklearn.datasets import load_iris\nfrom sklearn.preprocessing import StandardScaler\niris=load_iris();mask=iris.target!=2;X_raw=iris.data[mask,2:4];y_raw=iris.target[mask]\ny_bin=np.where(y_raw==0,-1,1);scaler=StandardScaler();X_sc=scaler.fit_transform(X_raw)\nclass LinearSVM:\n    def __init__(self,learning_rate=0.001,lambda_param=0.01,epochs=1000):\n        self.lr=learning_rate;self.lam=lambda_param;self.epochs=epochs;self.w=None;self.b=None\n    def fit(self,X,y):\n        n,d=X.shape;self.w=np.zeros(d);self.b=0.0\n        for _ in range(self.epochs):\n            for i,xi in enumerate(X):\n                m=y[i]*(np.dot(xi,self.w)+self.b)\n                if m>=1:dw=2*self.lam*self.w;db=0.0\n                else:dw=2*self.lam*self.w-y[i]*xi;db=-y[i]\n                self.w-=self.lr*dw;self.b-=self.lr*db\n    def predict(self,X):return np.sign(np.dot(X,self.w)+self.b)\n    def score(self,X,y):return np.mean(self.predict(X)==y)\nclass QuadraticSVM:\n    def __init__(self,lr=0.001,epochs=5000,C=1e9):\n        self.lr=lr;self.epochs=epochs;self.C=C;self.alphas=None;self.w=None;self.b=None;self.sv_mask=None\n    def fit(self,X,y):\n        n=len(y);Q=np.outer(y,y)*(X@X.T);self.alphas=np.zeros(n)\n        for _ in range(self.epochs):\n            grad=np.ones(n)-Q@self.alphas;self.alphas+=self.lr*grad;self.alphas=np.clip(self.alphas,0,self.C)\n            pos=self.alphas[y==1].sum();neg=self.alphas[y==-1].sum()\n            if pos>0 and neg>0:\n                self.alphas[y==1]*=(pos+neg)/(2*pos);self.alphas[y==-1]*=(pos+neg)/(2*neg)\n        self.sv_mask=self.alphas>1e-4;self.w=(self.alphas*y)@X\n        sv_idx=np.where(self.sv_mask)[0];self.b=np.mean(y[sv_idx]-X[sv_idx]@self.w)\n    def predict(self,X):return np.sign(X@self.w+self.b)\n    def score(self,X,y):return np.mean(self.predict(X)==y)\nsvm_linear=LinearSVM();svm_linear.fit(X_sc,y_bin)\nsvm_qp=QuadraticSVM();svm_qp.fit(X_sc,y_bin)\nnp.random.seed(42);n_houses=200\narea=np.random.randint(500,5001,size=n_houses).astype(float)\nprice=60000+95*area+np.random.randn(n_houses)*30000\nclass SimpleLinearRegression:\n    def __init__(self):self.m=0.0;self.c=0.0\n    def fit(self,X,y):\n        xb,yb=X.mean(),y.mean();self.m=np.sum((X-xb)*(y-yb))/np.sum((X-xb)**2);self.c=yb-self.m*xb\n    def predict(self,X):return self.m*X+self.c\n    def r_squared(self,X,y):\n        yh=self.predict(X);return 1-np.sum((y-yh)**2)/np.sum((y-y.mean())**2)\n    def mse(self,X,y):return np.mean((y-self.predict(X))**2)\nslr=SimpleLinearRegression();slr.fit(area,price)\nnp.random.seed(0);N=10000\nhours=np.random.randint(1,10,N).astype(float);prev=np.random.randint(40,100,N).astype(float)\nextra=np.random.randint(0,2,N).astype(float);sleep=np.random.randint(4,10,N).astype(float)\npapers=np.random.randint(0,10,N).astype(float)\nperf_idx=(10*hours+0.85*prev+3*extra+1.5*sleep+2.5*papers+np.random.randn(N)*5).clip(10,100)\nX_df=np.column_stack([hours,prev,extra,sleep,papers]);y_df=perf_idx\nclass MultipleLinearRegression:\n    def __init__(self):self.beta=None\n    def fit(self,X,y):\n        Xb=np.column_stack([np.ones(len(X)),X]);self.beta=np.linalg.lstsq(Xb,y,rcond=None)[0]\n    def predict(self,X):return np.column_stack([np.ones(len(X)),X])@self.beta\n    def r_squared(self,X,y):\n        yh=self.predict(X);return 1-np.sum((y-yh)**2)/np.sum((y-y.mean())**2)\n    def mse(self,X,y):return np.mean((y-self.predict(X))**2)\nmlr=MultipleLinearRegression();mlr.fit(X_df,y_df)\n`
   }
 };
 
-// ── STATE ──────────────────────────────────────────────────────────────────
-let currentLab     = 'lab1';
-let pyodide        = null;
+// LaTeX source strings (embedded for download)
+const LATEX = {
+  "lab1_naive_bayes.tex":      null,  // fetched on demand via filename hint — we embed key file
+  "lab2a_data_exploration.tex":null,
+  "lab2b_linear_svm.tex":      null,
+  "lab2c_quadratic_svm.tex":   null,
+  "lab2d_simple_lr.tex":       null,
+  "lab2e_multiple_lr.tex":     null,
+  "lab2f_comparison.tex":      null
+};
+
+// Sub-tab → latex filename map
+const SUB_LATEX = {
+  "overview":"lab2b_linear_svm.tex",
+  "2a":"lab2a_data_exploration.tex",
+  "2b":"lab2b_linear_svm.tex",
+  "2c":"lab2c_quadratic_svm.tex",
+  "2d":"lab2d_simple_lr.tex",
+  "2e":"lab2e_multiple_lr.tex",
+  "2f":"lab2f_comparison.tex"
+};
+
+// ══════════════════════════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════════════════════════
+let currentLab  = 'lab1';
+let currentSub  = 'overview';   // Lab 2 sub-tab
+let pyodide     = null;
 let pyodideLoading = false;
-const execCounts   = {};   // { cellIndex: n }
+const execCounts = {};
+const plotCache  = {};
 
 const $ = id => document.getElementById(id);
+function escapeHtml(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function autoResize(ta){ ta.style.height="auto"; ta.style.height=ta.scrollHeight+"px"; }
+function setKernel(state,label){ $("kernel-dot").className="kernel-dot "+state; $("kernel-label").textContent=label; }
 
-// ── UTILITIES ─────────────────────────────────────────────────────────────
-function escapeHtml(s) {
-  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-}
-function setKernel(state, label) {
-  const dot = $("kernel-dot"), lbl = $("kernel-label");
-  dot.className = "kernel-dot " + state;
-  lbl.textContent = label;
-}
-
-// ── MARKDOWN RENDERER ──────────────────────────────────────────────────────
-function renderMarkdown(src) {
-  let h = escapeHtml(src);
-  h = h.replace(/^### (.+)$/gm, "<h3>$1</h3>");
-  h = h.replace(/^## (.+)$/gm,  "<h2>$1</h2>");
-  h = h.replace(/^# (.+)$/gm,   "<h1>$1</h1>");
-  h = h.replace(/^---$/gm,      "<hr>");
-  h = h.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
-  h = h.replace(/\*(.+?)\*/g,   "<em>$1</em>");
-  h = h.replace(/`([^`]+)`/g,   "<code>$1</code>");
-  h = h.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
-  h = h.replace(/^&gt; (.+)$/gm,"<blockquote>$1</blockquote>");
-  h = h.replace(/((?:^\d+\. .+\n?)+)/gm, m => {
-    const items = m.trim().split("\n").map(l=>`<li>${l.replace(/^\d+\. /,"")}</li>`).join("");
-    return `<ol>${items}</ol>`;
+// ── MARKDOWN RENDERER ──────────────────────────────────────────────────
+function renderMarkdown(src){
+  let h=escapeHtml(src);
+  h=h.replace(/^### (.+)$/gm,"<h3>$1</h3>").replace(/^## (.+)$/gm,"<h2>$1</h2>").replace(/^# (.+)$/gm,"<h1>$1</h1>");
+  h=h.replace(/^---$/gm,"<hr>").replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>").replace(/\*(.+?)\*/g,"<em>$1</em>");
+  h=h.replace(/`([^`]+)`/g,"<code>$1</code>").replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2" target="_blank">$1</a>');
+  h=h.replace(/^&gt; (.+)$/gm,"<blockquote>$1</blockquote>");
+  h=h.replace(/((?:^\d+\. .+\n?)+)/gm,m=>`<ol>${m.trim().split("\n").map(l=>`<li>${l.replace(/^\d+\. /,"")}</li>`).join("")}</ol>`);
+  h=h.replace(/((?:^- .+\n?)+)/gm,m=>`<ul>${m.trim().split("\n").map(l=>`<li>${l.replace(/^- /,"")}</li>`).join("")}</ul>`);
+  // simple table (| col | col |)
+  h=h.replace(/((?:^\|.+\|\n?)+)/gm,tableBlock=>{
+    const rows=tableBlock.trim().split("\n");
+    let html="<table class='nb-table' style='margin:8px 0'>";
+    rows.forEach((row,i)=>{
+      if(/^\|[\s\-|]+\|$/.test(row)) return; // separator row
+      const cells=row.split("|").slice(1,-1);
+      const tag=i===0?"th":"td";
+      html+=`<tr>${cells.map(c=>`<${tag}>${c.trim()}</${tag}>`).join("")}</tr>`;
+    });
+    return html+"</table>";
   });
-  h = h.replace(/((?:^- .+\n?)+)/gm, m => {
-    const items = m.trim().split("\n").map(l=>`<li>${l.replace(/^- /,"")}</li>`).join("");
-    return `<ul>${items}</ul>`;
-  });
-  h = h.split("\n\n").map(block => {
-    block = block.trim();
-    if (!block) return "";
-    if (/^<(h[1-6]|ol|ul|blockquote|hr)/.test(block)) return block;
+  h=h.split("\n\n").map(block=>{
+    block=block.trim(); if(!block) return "";
+    if(/^<(h[1-6]|ol|ul|blockquote|hr|table)/.test(block)) return block;
     return `<p>${block.replace(/\n/g,"<br>")}</p>`;
   }).join("\n");
   return h;
 }
 
-// ── BUILD CONFUSION MATRIX TABLE ──────────────────────────────────────────
-function buildCMTable(tableData) {
-  const wrap = document.createElement("div");
-  wrap.className = "output-area output-table";
-  const cmWrap = document.createElement("div");
-  cmWrap.className = "cm-wrap";
-  if (tableData.title) {
-    const title = document.createElement("div");
-    title.className = "cm-title"; title.textContent = tableData.title;
-    cmWrap.appendChild(title);
-  }
-  const tbl = document.createElement("table");
-  tbl.className = "nb-table";
-  const thead = document.createElement("thead");
-  const hrow  = document.createElement("tr");
-  tableData.headers.forEach(h => { const th = document.createElement("th"); th.textContent = h; hrow.appendChild(th); });
-  thead.appendChild(hrow); tbl.appendChild(thead);
-  const tbody = document.createElement("tbody");
-  tableData.rows.forEach((row, ri) => {
-    const tr = document.createElement("tr");
-    row.forEach((val, ci) => {
-      const td = document.createElement("td"); td.textContent = val;
-      const r = ri + 1; const c = ci;
-      if (tableData.diagIndices && tableData.diagIndices.some(([a,b])=>a===r&&b===c)) td.className = "cm-diag";
-      else if (tableData.missIndices && parseInt(val) > 0 && tableData.missIndices.some(([a,b])=>a===r&&b===c)) td.className = "cm-miss";
+// ── BUILD CM TABLE ──────────────────────────────────────────────────────
+function buildCMTable(d){
+  const wrap=document.createElement("div"); wrap.className="output-area output-table";
+  const cw=document.createElement("div"); cw.className="cm-wrap";
+  if(d.title){const t=document.createElement("div");t.className="cm-title";t.textContent=d.title;cw.appendChild(t);}
+  const tbl=document.createElement("table"); tbl.className="nb-table";
+  const th=document.createElement("thead"); const hr=document.createElement("tr");
+  d.headers.forEach(h=>{const t=document.createElement("th");t.textContent=h;hr.appendChild(t);});
+  th.appendChild(hr); tbl.appendChild(th);
+  const tb=document.createElement("tbody");
+  d.rows.forEach((row,ri)=>{
+    const tr=document.createElement("tr");
+    row.forEach((val,ci)=>{
+      const td=document.createElement("td"); td.textContent=val;
+      const r=ri+1,c=ci;
+      if(d.diagIndices&&d.diagIndices.some(([a,b])=>a===r&&b===c)) td.className="cm-diag";
+      else if(d.missIndices&&parseInt(val)>0&&d.missIndices.some(([a,b])=>a===r&&b===c)) td.className="cm-miss";
       tr.appendChild(td);
     });
-    tbody.appendChild(tr);
+    tb.appendChild(tr);
   });
-  tbl.appendChild(tbody); cmWrap.appendChild(tbl); wrap.appendChild(cmWrap);
-  return wrap;
+  tbl.appendChild(tb); cw.appendChild(tbl); wrap.appendChild(cw); return wrap;
 }
 
-// ── BUILD METRICS BLOCK ────────────────────────────────────────────────────
-function buildMetricsBlock(data) {
-  const wrap = document.createElement("div"); wrap.className = "output-area";
-  const block = document.createElement("div"); block.className = "metrics-block";
-  const acc = document.createElement("div"); acc.className = "metrics-accuracy";
-  acc.innerHTML = `Overall Accuracy: <span>${(data.accuracy*100).toFixed(2)}%</span>&nbsp;·&nbsp; Correct: ${data.correct} / ${data.total} samples`;
-  block.appendChild(acc);
-  const tableWrap = document.createElement("div"); tableWrap.className = "metrics-table-wrap";
-  const tbl = document.createElement("table"); tbl.className = "metrics-table";
-  const thead = document.createElement("thead");
-  const hrow  = document.createElement("tr");
-  ["Class","Precision","Recall","F1-Score"].forEach(h => { const th = document.createElement("th"); th.textContent = h; hrow.appendChild(th); });
-  thead.appendChild(hrow); tbl.appendChild(thead);
-  const tbody = document.createElement("tbody");
-  data.rows.forEach(row => {
-    const tr = document.createElement("tr");
-    [row.label, row.precision, row.recall, row.f1].forEach(v => { const td = document.createElement("td"); td.textContent = v; tr.appendChild(td); });
-    tbody.appendChild(tr);
+// ── BUILD METRICS BLOCK ─────────────────────────────────────────────────
+function buildMetricsBlock(d){
+  const wrap=document.createElement("div"); wrap.className="output-area";
+  const bl=document.createElement("div"); bl.className="metrics-block";
+  const ac=document.createElement("div"); ac.className="metrics-accuracy";
+  ac.innerHTML=`Overall Accuracy: <span>${(d.accuracy*100).toFixed(2)}%</span>&nbsp;·&nbsp; Correct: ${d.correct} / ${d.total} samples`;
+  bl.appendChild(ac);
+  const tw=document.createElement("div"); tw.className="metrics-table-wrap";
+  const tbl=document.createElement("table"); tbl.className="metrics-table";
+  const th=document.createElement("thead"); const hr=document.createElement("tr");
+  ["Class","Precision","Recall","F1-Score"].forEach(h=>{const t=document.createElement("th");t.textContent=h;hr.appendChild(t);});
+  th.appendChild(hr); tbl.appendChild(th);
+  const tb=document.createElement("tbody");
+  d.rows.forEach(row=>{
+    const tr=document.createElement("tr");
+    [row.label,row.precision,row.recall,row.f1].forEach(v=>{const t=document.createElement("td");t.textContent=v;tr.appendChild(t);});
+    tb.appendChild(tr);
   });
-  const macroTr = document.createElement("tr"); macroTr.className = "macro-row";
-  ["macro avg", data.macro.precision, data.macro.recall, data.macro.f1].forEach(v => { const td = document.createElement("td"); td.textContent = v; macroTr.appendChild(td); });
-  tbody.appendChild(macroTr); tbl.appendChild(tbody); tableWrap.appendChild(tbl);
-  block.appendChild(tableWrap); wrap.appendChild(block);
-  return wrap;
+  const mr=document.createElement("tr"); mr.className="macro-row";
+  ["macro avg",d.macro.precision,d.macro.recall,d.macro.f1].forEach(v=>{const t=document.createElement("td");t.textContent=v;mr.appendChild(t);});
+  tb.appendChild(mr); tbl.appendChild(tb); tw.appendChild(tbl); bl.appendChild(tw); wrap.appendChild(bl); return wrap;
 }
 
-// ── AUTO-RESIZE TEXTAREA ──────────────────────────────────────────────────
-function autoResize(ta) {
-  ta.style.height = "auto";
-  ta.style.height = ta.scrollHeight + "px";
+// ── RENDER OUTPUT ───────────────────────────────────────────────────────
+function renderOutput(outBody,cell,cellIndex){
+  outBody.innerHTML="";
+  if(cell.outputType==="table"&&cell.tableData){ outBody.appendChild(buildCMTable(cell.tableData)); return; }
+  if(cell.outputType==="metrics"&&cell.metricsData){ outBody.appendChild(buildMetricsBlock(cell.metricsData)); return; }
+  const d=document.createElement("div"); d.className="output-area"; d.id=`output-area-${cellIndex}`;
+  const cached=plotCache[`${currentLab}_${cellIndex}`];
+  if(cached){ const img=document.createElement("img"); img.src=`data:image/png;base64,${cached}`; img.style.maxWidth="100%"; d.appendChild(img); }
+  else if(cell.preOutputImg){ d.innerHTML=`<em style="font-size:11px;color:#aaa">[ Click ▶ Run to generate plot ]</em>`; }
+  else{ d.textContent=cell.preOutput||""; }
+  outBody.appendChild(d);
 }
 
-// ── RENDER OUTPUT (pre-computed or after run) ──────────────────────────────
-function renderOutput(outBody, cell, cellIndex) {
-  outBody.innerHTML = "";
-  if (cell.outputType === "table" && cell.tableData) {
-    outBody.appendChild(buildCMTable(cell.tableData));
-  } else if (cell.outputType === "metrics" && cell.metricsData) {
-    outBody.appendChild(buildMetricsBlock(cell.metricsData));
-  } else if (cell.preOutputImg) {
-    const d = document.createElement("div");
-    d.className = "output-area";
-    d.id = `output-area-${cellIndex}`;
-    d.innerHTML = `<em style="font-size:11px;color:#888;">[ Click ▶ Run to generate plot ]</em>`;
-    outBody.appendChild(d);
-  } else if (cell.preOutput) {
-    const d = document.createElement("div");
-    d.className = "output-area";
-    d.id = `output-area-${cellIndex}`;
-    d.textContent = cell.preOutput;
-    outBody.appendChild(d);
-  }
-}
-
-// ── RENDER NOTEBOOK ────────────────────────────────────────────────────────
-function renderNotebook() {
-  const container = $("notebook");
-  container.innerHTML = "";
-  const cells = NOTEBOOKS[currentLab].cells;
-
-  cells.forEach((cell, cellIndex) => {
-    if (cell.type === "markdown") {
-      const div = document.createElement("div");
-      div.className = "cell cell-markdown";
-      div.innerHTML = `<div class="cell-gutter"><div class="cell-counter empty">.</div></div><div class="cell-body"><div class="markdown-content">${renderMarkdown(cell.source)}</div></div>`;
-      container.appendChild(div);
-      container.appendChild(makeCellGap());
-      return;
+// ── RENDER NOTEBOOK ────────────────────────────────────────────────────
+function renderNotebook(){
+  const container=$("notebook"); container.innerHTML="";
+  const lab=LABS[currentLab];
+  $("notebook-filename").textContent=lab.filename;
+  lab.cells.forEach((cell,cellIndex)=>{
+    if(cell.type==="markdown"){
+      const div=document.createElement("div"); div.className="cell cell-markdown";
+      div.innerHTML=`<div class="cell-gutter"><div class="cell-counter empty">.</div></div><div class="cell-body"><div class="markdown-content">${renderMarkdown(cell.source)}</div></div>`;
+      container.appendChild(div); container.appendChild(makeCellGap()); return;
     }
-
-    if (cell.type === "code") {
-      const execN = execCounts[currentLab + '_' + cellIndex] ?? cell.execCount;
-
-      const codeCell = document.createElement("div");
-      codeCell.className = "cell cell-code";
-      codeCell.dataset.cellIndex = cellIndex;
-
-      const gutter = document.createElement("div");
-      gutter.className = "cell-gutter";
-      const counter = document.createElement("div");
-      counter.className = "cell-counter";
-      counter.id = `label-${cellIndex}`;
-      counter.innerHTML = `In&nbsp;[${execN}]:`;
+    if(cell.type==="code"){
+      const execN=execCounts[`${currentLab}_${cellIndex}`]??cell.execCount;
+      const codeCell=document.createElement("div"); codeCell.className="cell cell-code"; codeCell.dataset.cellIndex=cellIndex;
+      const gutter=document.createElement("div"); gutter.className="cell-gutter";
+      const counter=document.createElement("div"); counter.className="cell-counter"; counter.id=`label-${cellIndex}`; counter.innerHTML=`In&nbsp;[${execN}]:`;
       gutter.appendChild(counter);
-
-      const body = document.createElement("div");
-      body.className = "cell-body";
-      const inner = document.createElement("div");
-      inner.className = "cell-code-inner";
-
-      const ta = document.createElement("textarea");
-      ta.className = "code-area";
-      ta.value = cell.source;
-      ta.spellcheck = false;
+      const body=document.createElement("div"); body.className="cell-body";
+      const inner=document.createElement("div"); inner.className="cell-code-inner";
+      const ta=document.createElement("textarea"); ta.className="code-area"; ta.value=cell.source; ta.spellcheck=false;
       ta.setAttribute("autocorrect","off"); ta.setAttribute("autocapitalize","off");
-      ta.setAttribute("aria-label", cell.label || `Code cell ${cellIndex}`);
-      ta.addEventListener("input", () => autoResize(ta));
-
-      const runBtn = document.createElement("button");
-      runBtn.className = "cell-run-btn";
-      runBtn.textContent = "\u25B6 Run";
-      runBtn.title = "Run this cell (Shift+Enter)";
-      runBtn.addEventListener("click", () => runCell(cellIndex, codeCell));
-      ta.addEventListener("keydown", e => { if (e.key==="Enter"&&e.shiftKey){ e.preventDefault(); runCell(cellIndex, codeCell); } });
-
-      inner.appendChild(ta); inner.appendChild(runBtn);
-      body.appendChild(inner); codeCell.appendChild(gutter); codeCell.appendChild(body);
+      ta.setAttribute("aria-label",cell.label||`Cell ${cellIndex}`);
+      ta.addEventListener("input",()=>autoResize(ta));
+      const runBtn=document.createElement("button"); runBtn.className="cell-run-btn"; runBtn.textContent="\u25B6 Run";
+      runBtn.addEventListener("click",()=>runCell(cellIndex,codeCell));
+      ta.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.shiftKey){e.preventDefault();runCell(cellIndex,codeCell);}});
+      inner.appendChild(ta); inner.appendChild(runBtn); body.appendChild(inner); codeCell.appendChild(gutter); codeCell.appendChild(body);
       container.appendChild(codeCell);
-
-      const outCell = document.createElement("div");
-      outCell.className = "cell cell-output";
-      outCell.id = `out-cell-${cellIndex}`;
-      const outGutter = document.createElement("div");
-      outGutter.className = "cell-gutter";
-      const outCounter = document.createElement("div");
-      outCounter.className = "cell-counter out";
-      outCounter.id = `out-label-${cellIndex}`;
-      outCounter.innerHTML = `Out&nbsp;[${execN}]:`;
+      const outCell=document.createElement("div"); outCell.className="cell cell-output"; outCell.id=`out-cell-${cellIndex}`;
+      const outGutter=document.createElement("div"); outGutter.className="cell-gutter";
+      const outCounter=document.createElement("div"); outCounter.className="cell-counter out"; outCounter.id=`out-label-${cellIndex}`; outCounter.innerHTML=`Out&nbsp;[${execN}]:`;
       outGutter.appendChild(outCounter);
-      const outBody = document.createElement("div");
-      outBody.className = "cell-body";
-      outBody.id = `out-body-${cellIndex}`;
-      renderOutput(outBody, cell, cellIndex);
-      outCell.appendChild(outGutter); outCell.appendChild(outBody);
-      container.appendChild(outCell);
-      container.appendChild(makeCellGap());
-      requestAnimationFrame(() => autoResize(ta));
+      const outBody=document.createElement("div"); outBody.className="cell-body"; outBody.id=`out-body-${cellIndex}`;
+      renderOutput(outBody,cell,cellIndex);
+      outCell.appendChild(outGutter); outCell.appendChild(outBody); container.appendChild(outCell); container.appendChild(makeCellGap());
+      requestAnimationFrame(()=>autoResize(ta));
     }
   });
 }
+function makeCellGap(){ const d=document.createElement("div"); d.className="cell-gap"; return d; }
 
-function makeCellGap() {
-  const d = document.createElement("div"); d.className = "cell-gap"; return d;
+// ── RENDER REPORT ──────────────────────────────────────────────────────
+function renderReport(){
+  const body=$("report-body"); body.innerHTML="";
+  const div=document.createElement("div"); div.className="report-card";
+  div.innerHTML=renderMarkdown(LABS[currentLab].report);
+  body.appendChild(div);
 }
 
-// ── PYODIDE ────────────────────────────────────────────────────────────────
-async function ensurePyodide() {
-  if (pyodide) return pyodide;
-  if (pyodideLoading) {
-    while (pyodideLoading) await new Promise(r => setTimeout(r, 200));
-    return pyodide;
-  }
-  pyodideLoading = true;
-  const banner = $("pyodide-banner");
-  const bar    = $("pyodide-bar");
-  banner.classList.add("visible");
-  setKernel("loading", "Python 3 (loading...)");
-
-  let progress = 0;
-  const tick = setInterval(() => {
-    progress = Math.min(progress + Math.random() * 12, 88);
-    bar.style.width = progress + "%";
-  }, 400);
-
-  await new Promise((resolve, reject) => {
-    if (window.loadPyodide) { resolve(); return; }
-    const s = document.createElement("script");
-    s.src = "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js";
-    s.onload = resolve; s.onerror = reject;
-    document.head.appendChild(s);
+// ── RENDER DATA SECTION ────────────────────────────────────────────────
+function renderDataSection(){
+  const body=$("data-body"); body.innerHTML="";
+  LABS[currentLab].datasets.forEach(ds=>{
+    const item=document.createElement("div"); item.className="data-item";
+    const info=document.createElement("div"); info.className="data-item-info";
+    const name=document.createElement("div"); name.className="data-item-name"; name.textContent=ds.name;
+    const desc=document.createElement("div"); desc.className="data-item-desc"; desc.textContent=ds.desc;
+    const tags=document.createElement("div"); tags.className="data-item-tags";
+    ds.tags.forEach(t=>{const tag=document.createElement("span");tag.className="tag";tag.textContent=t;tags.appendChild(tag);});
+    info.appendChild(name); info.appendChild(desc); info.appendChild(tags);
+    const btn=document.createElement("button"); btn.className="dl-link"; btn.textContent="↓ CSV"; btn.id=ds.dlId;
+    item.appendChild(info); item.appendChild(btn); body.appendChild(item);
   });
-
-  const pkgs = currentLab === 'lab1'
-    ? ["numpy", "scikit-learn"]
-    : ["numpy", "scikit-learn", "matplotlib"];
-  $("pyodide-banner-text").textContent = `Loading packages (${pkgs.join(', ')})...`;
-  pyodide = await window.loadPyodide();
-  await pyodide.loadPackage(pkgs);
-
-  // Shared kernel setup for current lab
-  await pyodide.runPythonAsync(NOTEBOOKS[currentLab].pySetup);
-
-  clearInterval(tick);
-  bar.style.width = "100%";
-  setTimeout(() => banner.classList.remove("visible"), 600);
-  pyodideLoading = false;
-  setKernel("idle", "Python 3 (idle)");
-  return pyodide;
+  wireDataButtons();
 }
 
-// ── RUN CELL ───────────────────────────────────────────────────────────────
-async function runCell(cellIndex, codeCellEl) {
-  const ta      = codeCellEl.querySelector(".code-area");
-  const runBtn  = codeCellEl.querySelector(".cell-run-btn");
-  const outBody = $(`out-body-${cellIndex}`);
+// ── RENDER RESULTS ──────────────────────────────────────────────────────
+function renderResults(){
+  const body=$("results-body"); body.innerHTML="";
+  const grid=document.createElement("div"); grid.className="results-grid";
+  LABS[currentLab].results.forEach((r,i)=>{
+    const card=document.createElement("div"); card.className="result-card";
+    const hdr=document.createElement("div"); hdr.className="result-card-header"; hdr.innerHTML=`<span>${r.title}</span>`;
+    if(r.type==="plot"){const hint=document.createElement("span");hint.className="run-hint";hint.textContent="run to generate";hdr.appendChild(hint);}
+    card.appendChild(hdr);
+    const cb=document.createElement("div"); cb.className="result-card-body"; cb.id=`result-card-${i}`;
+    if(r.type==="stat"){
+      const s=document.createElement("div"); s.className="result-stat";
+      s.innerHTML=`<div class="stat-val">${r.value}</div><div class="stat-label">${r.sub}</div>`; cb.appendChild(s);
+    } else if(r.type==="table"&&r.tableData){
+      cb.style.justifyContent="flex-start"; cb.style.alignItems="flex-start"; cb.appendChild(buildCMTable(r.tableData));
+    } else if(r.type==="metrics"&&r.metricsData){
+      cb.style.justifyContent="flex-start"; cb.style.alignItems="flex-start"; cb.appendChild(buildMetricsBlock(r.metricsData));
+    } else if(r.type==="plot"){
+      const cached=plotCache[`${currentLab}_${r.cellIndex}`];
+      if(cached){ const img=document.createElement("img"); img.src=`data:image/png;base64,${cached}`; img.style.maxWidth="100%"; cb.appendChild(img); }
+      else { const ph=document.createElement("div"); ph.className="result-placeholder"; ph.textContent="Run the notebook cell to see this graph"; cb.appendChild(ph); }
+    }
+    card.appendChild(cb); grid.appendChild(card);
+  });
+  body.appendChild(grid);
+}
 
-  runBtn.textContent = "...";
-  runBtn.classList.add("running");
-  setKernel("busy", "Python 3 (busy)");
-  codeCellEl.classList.add("selected");
+// ── RENDER ALL ─────────────────────────────────────────────────────────
+function renderAll(){
+  const lab=LABS[currentLab];
+  $("toolbar-title").textContent=lab.title;
+  $("toolbar-sub").textContent=lab.subtitle;
+  $("notebook-filename").textContent=lab.filename;
+  renderReport(); renderDataSection(); renderNotebook(); renderResults();
+  wirePillButtons();
+}
 
-  try {
-    const py = await ensurePyodide();
-    let stdout = "";
-    py.setStdout({ batched: s => { stdout += s + "\n"; } });
-    await py.runPythonAsync(ta.value);
-    py.setStdout(null);
+// ══════════════════════════════════════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════════════════════════════════════
+function goHome(){
+  $("page-home").style.display="";
+  $("page-lab").style.display="none";
+  $("back-btn").style.display="none";
+  $("topbar-brand").textContent="ML Lab Assignments";
+  $("kernel-badge").style.display="none";
+  $("subnav").style.display="none";
+  window.scrollTo(0,0);
+}
 
-    const key = currentLab + '_' + cellIndex;
-    execCounts[key] = (execCounts[key] ?? NOTEBOOKS[currentLab].cells[cellIndex].execCount) + 1;
-    const n = execCounts[key];
-    const lbl    = $(`label-${cellIndex}`);
-    const outLbl = $(`out-label-${cellIndex}`);
-    if (lbl)    lbl.innerHTML    = `In&nbsp;[${n}]:`;
-    if (outLbl) outLbl.innerHTML = `Out&nbsp;[${n}]:`;
+function openLab(labKey){
+  currentLab=labKey;
+  $("page-home").style.display="none";
+  $("page-lab").style.display="";
+  $("back-btn").style.display="";
+  $("topbar-brand").textContent=LABS[labKey].title;
+  $("kernel-badge").style.display="";
+  // Sub-nav only for lab2
+  if(labKey==="lab2"){
+    $("subnav").style.display="";
+    currentSub="overview";
+    document.querySelectorAll(".subnav-btn").forEach(b=>b.classList.remove("active"));
+    document.querySelector('.subnav-btn[data-sub="overview"]').classList.add("active");
+    $("dl-latex-btn").title="Download LaTeX for current sub-report";
+  } else {
+    $("subnav").style.display="none";
+  }
+  // Reset per-lab pyodide state if switching labs
+  pyodide=null; pyodideLoading=false;
+  Object.keys(execCounts).forEach(k=>{if(k.startsWith(currentLab+'_')) delete execCounts[k];});
+  Object.keys(plotCache).forEach(k=>{if(k.startsWith(currentLab+'_')) delete plotCache[k];});
+  setKernel("","Python 3 (idle)");
+  renderAll();
+  window.scrollTo(0,0);
+}
 
-    outBody.innerHTML = "";
-    // Check if output contains an image marker
-    if (stdout.includes('__IMG__')) {
-      const b64 = stdout.split('__IMG__')[1].trim();
-      const img = document.createElement("img");
-      img.src = `data:image/png;base64,${b64}`;
-      img.style.cssText = "max-width:100%;display:block;";
-      const d = document.createElement("div");
-      d.className = "output-area";
-      d.appendChild(img);
-      outBody.appendChild(d);
+// Sub-nav (Lab 2 only)
+document.querySelectorAll(".subnav-btn").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    currentSub=btn.dataset.sub;
+    document.querySelectorAll(".subnav-btn").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    // Update LaTeX download target
+    wirePillButtons();
+    // Scroll to relevant section
+    const sectionMap={"overview":"sec-report","2a":"sec-report","2b":"sec-notebook","2c":"sec-notebook","2d":"sec-notebook","2e":"sec-notebook","2f":"sec-results"};
+    const sec=$(sectionMap[currentSub]||"sec-report");
+    if(sec) sec.scrollIntoView({behavior:"smooth",block:"start"});
+  });
+});
+
+// ── PYODIDE ─────────────────────────────────────────────────────────────
+async function ensurePyodide(){
+  if(pyodide) return pyodide;
+  if(pyodideLoading){ while(pyodideLoading) await new Promise(r=>setTimeout(r,200)); return pyodide; }
+  pyodideLoading=true;
+  const banner=$("pyodide-banner"),bar=$("pyodide-bar");
+  banner.classList.add("visible"); setKernel("loading","Python 3 (loading…)");
+  let progress=0;
+  const tick=setInterval(()=>{ progress=Math.min(progress+Math.random()*12,88); bar.style.width=progress+"%"; },400);
+  await new Promise((resolve,reject)=>{
+    if(window.loadPyodide){resolve();return;}
+    const s=document.createElement("script"); s.src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js";
+    s.onload=resolve; s.onerror=reject; document.head.appendChild(s);
+  });
+  const pkgs=currentLab==="lab1"?["numpy","scikit-learn"]:["numpy","scikit-learn","matplotlib"];
+  $("pyodide-banner-text").textContent=`Loading packages (${pkgs.join(", ")})…`;
+  pyodide=await window.loadPyodide(); await pyodide.loadPackage(pkgs);
+  await pyodide.runPythonAsync(LABS[currentLab].pySetup);
+  clearInterval(tick); bar.style.width="100%";
+  setTimeout(()=>banner.classList.remove("visible"),600);
+  pyodideLoading=false; setKernel("idle","Python 3 (idle)"); return pyodide;
+}
+
+// ── RUN CELL ────────────────────────────────────────────────────────────
+async function runCell(cellIndex,codeCellEl){
+  const ta=codeCellEl.querySelector(".code-area"),runBtn=codeCellEl.querySelector(".cell-run-btn"),outBody=$(`out-body-${cellIndex}`);
+  runBtn.textContent="…"; runBtn.classList.add("running"); setKernel("busy","Python 3 (busy)"); codeCellEl.classList.add("selected");
+  try{
+    const py=await ensurePyodide(); let stdout="";
+    py.setStdout({batched:s=>{stdout+=s+"\n";}});
+    await py.runPythonAsync(ta.value); py.setStdout(null);
+    const key=`${currentLab}_${cellIndex}`;
+    execCounts[key]=(execCounts[key]??LABS[currentLab].cells[cellIndex].execCount)+1;
+    const n=execCounts[key];
+    const lbl=$(`label-${cellIndex}`),outLbl=$(`out-label-${cellIndex}`);
+    if(lbl)    lbl.innerHTML=`In&nbsp;[${n}]:`;
+    if(outLbl) outLbl.innerHTML=`Out&nbsp;[${n}]:`;
+    outBody.innerHTML="";
+    if(stdout.includes("__IMG__")){
+      const b64=stdout.split("__IMG__")[1].trim(); plotCache[key]=b64;
+      const img=document.createElement("img"); img.src=`data:image/png;base64,${b64}`; img.style.maxWidth="100%";
+      const d=document.createElement("div"); d.className="output-area"; d.appendChild(img); outBody.appendChild(d);
+      renderResults(); // refresh graph cards
     } else {
-      const d = document.createElement("div");
-      d.className = "output-area";
-      d.id = `output-area-${cellIndex}`;
-      d.textContent = stdout.trim();
-      outBody.appendChild(d);
+      const d=document.createElement("div"); d.className="output-area"; d.id=`output-area-${cellIndex}`; d.textContent=stdout.trim(); outBody.appendChild(d);
     }
-    setKernel("idle", "Python 3 (idle)");
-  } catch (err) {
-    py && py.setStdout && py.setStdout(null);
-    setKernel("idle", "Python 3 (idle)");
-    outBody.innerHTML = "";
-    const d = document.createElement("div");
-    d.className = "output-area output-error";
-    d.textContent = String(err);
-    outBody.appendChild(d);
-  } finally {
-    runBtn.textContent = "\u25B6 Run";
-    runBtn.classList.remove("running");
-    codeCellEl.classList.remove("selected");
+    setKernel("idle","Python 3 (idle)");
+  }catch(err){
+    py&&py.setStdout&&py.setStdout(null); setKernel("idle","Python 3 (idle)"); outBody.innerHTML="";
+    const d=document.createElement("div"); d.className="output-area output-error"; d.textContent=String(err); outBody.appendChild(d);
+  }finally{
+    runBtn.textContent="\u25B6 Run"; runBtn.classList.remove("running"); codeCellEl.classList.remove("selected");
   }
 }
+
+// ── RUN ALL ──────────────────────────────────────────────────────────────
+$("run-all-btn").addEventListener("click",async()=>{
+  const cells=LABS[currentLab].cells;
+  for(let i=0;i<cells.length;i++){
+    if(cells[i].type!=="code") continue;
+    const el=document.querySelector(`.cell-code[data-cell-index="${i}"]`);
+    if(el) await runCell(i,el);
+  }
+});
+
+// ── RESTART ──────────────────────────────────────────────────────────────
+$("restart-btn").addEventListener("click",()=>{
+  pyodide=null; pyodideLoading=false;
+  Object.keys(execCounts).forEach(k=>{if(k.startsWith(currentLab+'_')) delete execCounts[k];});
+  Object.keys(plotCache).forEach(k=>{if(k.startsWith(currentLab+'_')) delete plotCache[k];});
+  setKernel("","Python 3 (idle)"); renderAll();
+});
+
+// ══════════════════════════════════════════════════════════════════════
+//  DOWNLOAD HELPERS
+// ══════════════════════════════════════════════════════════════════════
+function triggerDownload(content,mime,filename){
+  const blob=new Blob([content],{type:mime}),url=URL.createObjectURL(blob);
+  const a=document.createElement("a"); a.href=url; a.download=filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+function buildIpynb(labKey){
+  const lab=LABS[labKey];
+  const ipynbCells=lab.cells.map((cell,i)=>{
+    if(cell.type==="markdown") return {cell_type:"markdown",metadata:{},source:cell.source.split("\n").map((l,j,a)=>j<a.length-1?l+"\n":l)};
+    const outEl=$(`output-area-${i}`); let txt=outEl?outEl.textContent:(cell.preOutput||"");
+    if(!txt&&cell.outputType==="table"&&cell.tableData) txt=cell.tableData.headers.join("\t")+"\n"+cell.tableData.rows.map(r=>r.join("\t")).join("\n");
+    if(!txt&&cell.outputType==="metrics"&&cell.metricsData){
+      const d=cell.metricsData; txt=`Accuracy: ${(d.accuracy*100).toFixed(2)}%\n`;
+      d.rows.forEach(r=>{txt+=`${r.label}: P=${r.precision} R=${r.recall} F1=${r.f1}\n`;}); txt+=`macro: P=${d.macro.precision} R=${d.macro.recall} F1=${d.macro.f1}\n`;
+    }
+    const key=`${labKey}_${i}`,execN=execCounts[key]??cell.execCount;
+    return {cell_type:"code",execution_count:execN,metadata:{},
+      source:cell.source.split("\n").map((l,j,a)=>j<a.length-1?l+"\n":l),
+      outputs:txt?[{output_type:"stream",name:"stdout",text:txt.split("\n").map((l,j,a)=>j<a.length-1?l+"\n":l)}]:[]};
+  });
+  return {nbformat:4,nbformat_minor:5,metadata:{kernelspec:{display_name:"Python 3",language:"python",name:"python3"},language_info:{name:"python",version:"3.11.0"}},cells:ipynbCells};
+}
+
+const IRIS_CSV="sepal_length,sepal_width,petal_length,petal_width,class\n5.1,3.5,1.4,0.2,setosa\n4.9,3.0,1.4,0.2,setosa\n4.7,3.2,1.3,0.2,setosa\n5.0,3.6,1.4,0.2,setosa\n7.0,3.2,4.7,1.4,versicolor\n6.4,3.2,4.5,1.5,versicolor\n6.9,3.1,4.9,1.5,versicolor\n6.3,3.3,6.0,2.5,virginica\n5.8,2.7,5.1,1.9,virginica\n7.1,3.0,5.9,2.1,virginica";
+const STUDENT_CSV="Hours Studied,Previous Scores,Extracurricular Activities,Sleep Hours,Sample Question Papers Practiced,Performance Index\n7,99,1,9,1,91\n4,82,0,4,2,65\n8,51,1,7,2,45\n5,52,1,5,2,36\n9,75,1,8,5,82\n6,70,0,6,3,68\n3,60,0,5,1,45\n8,90,1,9,4,88\n5,55,0,5,2,40\n7,80,1,7,3,78";
+
+function wireDataButtons(){
+  const d1=$("dl1-iris"); if(d1) d1.onclick=()=>triggerDownload(IRIS_CSV,"text/csv","iris_dataset.csv");
+  const d2i=$("dl2-iris"); if(d2i) d2i.onclick=()=>triggerDownload(IRIS_CSV,"text/csv","iris_dataset.csv");
+  const d2s=$("dl2-student"); if(d2s) d2s.onclick=()=>triggerDownload(STUDENT_CSV,"text/csv","Student_Performance.csv");
+}
+
+function wirePillButtons(){
+  $("dl-ipynb-btn").onclick=()=>triggerDownload(JSON.stringify(buildIpynb(currentLab),null,2),"application/json",LABS[currentLab].filename);
+  $("dl-code-btn").onclick=()=>{
+    const header=`# ${LABS[currentLab].title}\n# Ghanshyam Ghimire | KU BTech AI, Sem 4 | Instructor: Sandeep Gupta\n\n`;
+    const code=LABS[currentLab].cells.filter(c=>c.type==="code").map(c=>`# ${"─".repeat(50)}\n# ${c.label||"Cell"}\n# ${"─".repeat(50)}\n\n${c.source}`).join("\n\n\n");
+    const fname=currentLab==="lab1"?"naive_bayes_iris.py":"svm_linear_regression.py";
+    triggerDownload(header+code,"text/plain",fname);
+  };
+  // LaTeX download — tries to fetch from lab-reports/ folder; falls back to hint
+  $("dl-latex-btn").onclick=()=>{
+    const latexFile=currentLab==="lab1"?LABS.lab1.latexFile:SUB_LATEX[currentSub]||"lab2b_linear_svm.tex";
+    fetch(`../lab-reports/${latexFile}`)
+      .then(r=>r.ok?r.text():null)
+      .then(tex=>{
+        if(tex) triggerDownload(tex,"text/x-tex",latexFile);
+        else alert(`LaTeX file: lab-reports/${latexFile}\nOpen it from the project folder in a LaTeX editor.`);
+      })
+      .catch(()=>alert(`LaTeX file: lab-reports/${latexFile}\nOpen it from the project folder in a LaTeX editor.`));
+  };
+}
+
+// ── INIT ─────────────────────────────────────────────────────────────────
+// Start on home page
+goHome();
